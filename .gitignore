@@ -1,0 +1,60 @@
+# FreshGuard -- files that must never be committed.
+# Patterns without a leading slash apply in every folder (web-dashboard and
+# raspberry-pi alike).
+
+# --- Secrets and credentials ------------------------------------------------
+.env
+.env.*
+!.env.example
+secrets/
+firebase-key.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+# TLS certificate and key for the dashboard's HTTPS (FG_TLS_CERT / FG_TLS_KEY)
+*.pem
+*.key
+*.crt
+
+# --- Databases and their WAL side files -------------------------------------
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# --- Runtime data the dashboard and Pi regenerate ---------------------------
+# Camera frames, requested snapshots, database backups and worker logs.
+# var/icons is source material and stays tracked.
+web-dashboard/var/snapshots/
+web-dashboard/var/captures/
+web-dashboard/var/*.db
+web-dashboard/var/*.log
+# The simulator's scenario control file, written while the monitor runs.
+sim_scenario
+# Readings the Pi holds while it is offline.
+unsent_buffer.json
+*.log
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# --- Editors and operating systems ------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

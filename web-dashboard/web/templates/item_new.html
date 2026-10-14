@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% from "components.html" import icon, sticker with context %}
+
+{% block title %}Add an item · FreshGuard{% endblock %}
+
+{% block content %}
+  {# The kiosk's other half. Someone is standing at the fridge holding a bag,
+     often with one hand, so every answer here is a thing you tap. Typing is
+     always still available behind a key, because no fixed list can cover a
+     real kitchen -- but it is the fallback, not the path. #}
+  <div class="fg-kiosk-page">
+    {# The visible hierarchy on this page starts at the step title, and there
+       are six of those in the DOM at once, so none of them can be the page
+       heading. This names the page for a screen reader without adding a
+       second title above the step you are actually on. #}
+    <h1 class="fg-visually-hidden">Add an item</h1>
+
+    <header class="fg-kiosk-page__top">
+      <a class="fg-brand" href="{{ url_for('main.scan') }}">
+        <span class="fg-brand__mark">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+        </span>
+        FreshGuard
+      </a>
+      <div class="fg-kiosk-page__end">
+        {# The kiosk is one screen in two halves, so the controls that belong
+           to the screen rather than to the task stay in the same corner on
+           both. Without this the wizard was the one page in the app with no
+           way to reach dark mode. #}
+        <button class="fg-icon-btn" type="button" id="fg-theme-toggle" aria-pressed="false">
+          <span class="fg-theme-icon fg-theme-icon--light">{{ icon('sun', label='Switch to dark mode') }}</span>
+          <span class="fg-theme-icon fg-theme-icon--dark">{{ icon('moon', label='Switch to light mode') }}</span>
+        </button>
+        <a class="fg-btn fg-btn--lg" href="{{ url_for('main.scan') }}">
+          {{ icon('close') }}Cancel
+        </a>
+      </div>
+    </header>
+
+    {% if not categories or not zones %}
+      <div class="fg-alert fg-alert--warning">
+        <p class="fg-alert__body">
+          No food categories or storage zones are configured yet. An administrator must add them
+          before anything can be stored.
+        </p>
+      </div>
+    {% else %}
+      <section class="fg-wizard" id="fg-wizard">
+        {# Progress is a list, so a screen reader hears the same thing the eye
+           sees, and the current step is announced rather than only coloured. #}
+        <ol class="fg-steps" id="fg-steps">
+          {% for name in ['Kind', 'Name', 'Where', 'Amount', 'Dates', 'Check'] %}
+            <li class="fg-steps__step" data-step-marker="{{ loop.index0 }}"
+                {% if loop.first %}aria-current="step"{% endif %}>
+              <span class="fg-steps__dot">{{ loop.index }}</span>
+              <span class="fg-steps__name">{{ name }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+
+        <form id="fg-wizard-form" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+
+          {# ---------------------------------------------------- 1. category #}
+          {# Category comes before the name because it decides which names are
+             worth offering, and because it is the field that actually changes
+             the verdict: it carries the temperature, humidity and storage
+             limits the engine judges this item against. #}
+          <section class="fg-step" data-step="0" role="group" aria-labelledby="fg-step-0-title">
+            <h2 class="fg-step__title" id="fg-step-0-title">What kind of food is it?</h2>
+            
+            <p class="fg-step__hint">
+              This sets the temperature, humidity and storage limits used to judge it.
+            </p>
+
+            <div class="fg-choices fg-choices--cat" role="radiogroup" aria-label="Category">
+              {% for category in categories %}
+                <button class="fg-choice fg-cat-{{ category }}" type="button"
+                        role="radio" aria-checked="false"
+                        data-choice="category" data-value="{{ category }}">
+                  {{ sticker(category, 'md') }}
+                  <span class="fg-choice__label">{{ category }}</span>
+                </button>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="category" id="field-category" required>
+          </section>
+
+          {# -------------------------------------------------------- 2. name #}
+          <section class="fg-step" data-step="1" role="group" aria-labelledby="fg-step-1-title" hidden>
+            <h2 class="fg-step__title" id="fg-step-1-title">What is it?</h2>
+            
+            <p class="fg-step__hint">
+              Tap what you are putting in. The things this kitchen stores most come first.
+            </p>
+
+            {% for category, names in suggestions.items() %}
+              <div class="fg-choices fg-choices--name" data-names-for="{{ category }}" hidden>
+                {% for name in names %}
+                  <button class="fg-choice fg-choice--wide" type="button"
+                          data-choice="name" data-value="{{ name }}">
+                    <span class="fg-choice__label">{{ name }}</span>
+                  </button>
+                {% endfor %}
+              </div>
+            {% endfor %}
+
+            <div class="fg-typeit">
+              <button class="fg-btn fg-btn--lg" type="button" id="fg-type-name">
+                {{ icon('plus') }}Something else
+              </button>
+              <div class="fg-field" id="fg-name-field" hidden>
+                <label class="fg-label" for="field-name">Name</label>
+                <input class="fg-input fg-input--lg" id="field-name" name="name" required
+                       autocomplete="off" placeholder="What is it called?">
+              </div>
+            </div>
+          </section>
+
+          {# ------------------------------------------------------- 3. where #}
+          <section class="fg-step" data-step="2" role="group" aria-labelledby="fg-step-2-title" hidden>
+            <h2 class="fg-step__title" id="fg-step-2-title">Where does it go?</h2>
+            
+            <p class="fg-step__hint">
+              The zone decides which sensors apply to it. Air quality is measured for a whole
+              zone and is never attributed to one container.
+            </p>
+
+            {# Two questions side by side rather than stacked. Zone and label
+               are independent, so asking them in a row halves the height and
+               keeps the step inside the screen with the keypad open -- which
+               is the only reason this step ever needed to scroll. #}
+            <div class="fg-step__row">
+              <div class="fg-step__col">
+                <span class="fg-label">Storage zone</span>
+                <div class="fg-choices fg-choices--stack" role="radiogroup" aria-label="Zone">
+                  {% for zone in zones %}
+                    <button class="fg-choice fg-choice--wide" type="button"
+                            role="radio" aria-checked="{{ 'true' if loop.first else 'false' }}"
+                            data-choice="zone_id" data-value="{{ zone.id }}"
+                            data-label="{{ zone.name }}">
+                      <span class="fg-choice__label">{{ zone.name }}</span>
+                    </button>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="zone_id" id="field-zone_id"
+                       value="{{ zones[0].id }}" required>
+              </div>
+
+              <div class="fg-step__col fg-field--label">
+                {% if rfid_tag %}
+                  {# Arrived from a tap at the fridge: the tag is fixed, and the
+                     FG label below is assigned for it. #}
+                  <span class="fg-label">RFID tag</span>
+                  <p class="fg-kiosk-tag" id="fg-rfid-display">{{ rfid_tag }}</p>
+                  <input type="hidden" name="rfid_tag" id="field-rfid_tag" value="{{ rfid_tag }}">
+                  <p class="fg-field__hint">Tapped in at the fridge. Tap it again to take it out.</p>
+                {% endif %}
+                <span class="fg-label">Container label</span>
+                <p class="fg-kiosk-id" id="fg-qr-display">{{ qr_id or suggested_qr }}</p>
+                <input type="hidden" name="qr_id" id="field-qr_id"
+                       value="{{ qr_id or suggested_qr }}" required>
+                <p class="fg-field__hint">
+                  {% if qr_id %}
+                    Read from the label you scanned.
+                  {% else %}
+                    {{ suggested_qr }} is the next one free. Print it and stick it on the container.
+                  {% endif %}
+                </p>
+                <button class="fg-btn fg-btn--lg" type="button" id="fg-edit-qr"
+                        aria-expanded="false">
+                  {{ icon('qr') }}Use a different label
+                </button>
+
+                {# An on-screen pad, because the only thing that changes here is
+                   four digits and a kiosk may have no keyboard at all. #}
+                <div class="fg-keypad" id="fg-keypad" hidden>
+                  {% for digit in ['1', '2', '3', '4', '5', '6', '7', '8', '9'] %}
+                    <button class="fg-key" type="button" data-key="{{ digit }}">{{ digit }}</button>
+                  {% endfor %}
+                  <button class="fg-key fg-key--wide" type="button" data-key="clear">Clear</button>
+                  <button class="fg-key" type="button" data-key="0">0</button>
+                  <button class="fg-key" type="button" data-key="back"
+                          aria-label="Delete the last digit">&larr;</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {# ------------------------------------------------------ 4. amount #}
+          <section class="fg-step" data-step="3" role="group" aria-labelledby="fg-step-3-title" hidden>
+            <h2 class="fg-step__title" id="fg-step-3-title">How much of it?</h2>
+            
+            <p class="fg-step__hint">Whatever is written on the pack is fine.</p>
+
+            <div class="fg-stepper">
+              <button class="fg-stepper__btn" type="button" data-step-quantity="-1"
+                      aria-label="Less">&minus;</button>
+              <input class="fg-stepper__value" id="field-quantity" name="quantity"
+                     type="number" step="any" min="0" value="1" required
+                     inputmode="decimal" aria-label="Quantity">
+              <button class="fg-stepper__btn" type="button" data-step-quantity="1"
+                      aria-label="More">+</button>
+            </div>
+
+            <div class="fg-choices fg-choices--unit" role="radiogroup" aria-label="Unit">
+              {% for unit in units %}
+                <button class="fg-choice" type="button" role="radio"
+                        aria-checked="{{ 'true' if loop.first else 'false' }}"
+                        data-choice="unit" data-value="{{ unit }}">
+                  <span class="fg-choice__label">{{ unit }}</span>
+                </button>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="unit" id="field-unit" value="{{ units[0] }}">
+          </section>
+
+          {# ------------------------------------------------------- 5. dates #}
+          <section class="fg-step" data-step="4" role="group" aria-labelledby="fg-step-4-title" hidden>
+            <h2 class="fg-step__title" id="fg-step-4-title">When?</h2>
+            
+            <p class="fg-step__hint">
+              Read the use-by date off the packaging. If there is not one, leave it as
+              "No date printed" and the category's storage limit applies instead.
+            </p>
+
+            <div class="fg-dategroup">
+              <span class="fg-label">Put in</span>
+              <div class="fg-choices" role="radiogroup" aria-label="Date stored">
+                <button class="fg-choice" type="button" role="radio"
+                        aria-checked="{{ 'true' if put_in_offset == 0 else 'false' }}"
+                        data-choice="storage_date" data-offset="0">
+                  <span class="fg-choice__label">Today</span>
+                </button>
+                <button class="fg-choice" type="button" role="radio"
+                        aria-checked="{{ 'true' if put_in_offset == -1 else 'false' }}"
+                        data-choice="storage_date" data-offset="-1">
+                  <span class="fg-choice__label">Yesterday</span>
+                </button>
+                <button class="fg-choice" type="button" role="radio"
+                        aria-checked="{{ 'true' if put_in_offset == -2 else 'false' }}"
+                        data-choice="storage_date" data-offset="-2">
+                  <span class="fg-choice__label">2 days ago</span>
+                </button>
+              </div>
+              <input type="hidden" name="storage_date" id="field-storage_date"
+                     value="{{ put_in }}" required>
+            </div>
+
+            <div class="fg-dategroup">
+              <span class="fg-label">Use by</span>
+              <div class="fg-choices" role="radiogroup" aria-label="Use-by date">
+                <button class="fg-choice" type="button" role="radio" aria-checked="true"
+                        data-choice="expiry_date" data-offset="">
+                  <span class="fg-choice__label">No date printed</span>
+                </button>
+                {% for days in [3, 7, 14, 30] %}
+                  <button class="fg-choice" type="button" role="radio" aria-checked="false"
+                          data-choice="expiry_date" data-offset="{{ days }}">
+                    <span class="fg-choice__label">{{ days }} days</span>
+                  </button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="expiry_date" id="field-expiry_date" value="">
+              <p class="fg-field__hint" id="fg-expiry-echo">
+                No use-by date. The category's storage limit will be used.
+              </p>
+            </div>
+
+            <div class="fg-typeit">
+              <button class="fg-btn" type="button" id="fg-type-dates">
+                {{ icon('calendar') }}Pick exact dates
+              </button>
+              <div class="fg-grid fg-grid--2" id="fg-date-fields" hidden>
+                <div class="fg-field">
+                  <label class="fg-label" for="field-storage_date_exact">Put in</label>
+                  <input class="fg-input fg-input--lg" id="field-storage_date_exact" type="date"
+                         value="{{ put_in }}">
+                </div>
+                <div class="fg-field">
+                  <label class="fg-label" for="field-expiry_date_exact">Use by</label>
+                  <input class="fg-input fg-input--lg" id="field-expiry_date_exact" type="date">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {# ------------------------------------------------------- 6. check #}
+          <section class="fg-step" data-step="5" role="group" aria-labelledby="fg-step-5-title" hidden>
+            <h2 class="fg-step__title" id="fg-step-5-title">Does this look right?</h2>
+            
+            <p class="fg-step__hint">Nothing has been saved yet.</p>
+            <div class="fg-review" id="fg-review"></div>
+          </section>
+
+          <p class="fg-field__error" id="fg-wizard-error" hidden role="alert"></p>
+
+          <div class="fg-wizard__actions">
+            <button class="fg-btn fg-btn--lg" type="button" id="fg-wizard-back" hidden>
+              {{ icon('chevron') }}Back
+            </button>
+            <span class="fg-wizard__spacer"></span>
+            <button class="fg-btn fg-btn--primary fg-btn--lg" type="button" id="fg-wizard-next">
+              Next{{ icon('arrow') }}
+            </button>
+            <button class="fg-btn fg-btn--primary fg-btn--lg" type="submit" id="fg-wizard-save"
+                    hidden>
+              {{ icon('check') }}Put it in
+            </button>
+          </div>
+        </form>
+      </section>
+    {% endif %}
+
+    <p class="fg-disclaimer">FreshGuard does not certify food safety. Inspect food before use.</p>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/item_new.js') }}"></script>
+{% endblock %}

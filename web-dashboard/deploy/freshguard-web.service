@@ -1,0 +1,30 @@
+[Unit]
+Description=FreshGuard dashboard
+Documentation=file:/opt/freshguard/README.md
+After=network.target
+
+[Service]
+Type=simple
+User=freshguard
+Group=freshguard
+WorkingDirectory=/opt/freshguard
+EnvironmentFile=/opt/freshguard/.env
+# The dashboard only reads what the monitor wrote; it never touches a sensor.
+ExecStart=/opt/freshguard/.venv/bin/python -m flask --app app:create_app run \
+    --host 0.0.0.0 --port 5000 --no-reload
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=freshguard-web
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/freshguard
+
+[Install]
+WantedBy=multi-user.target

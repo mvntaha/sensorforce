@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% from "components.html" import field, badge, icon, page_head, note with context %}
+
+{% block title %}{{ qr_id }} · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head(item.name if item else 'Store something new',
+                      'Container ' ~ qr_id,
+                      eyebrow='Food item') %}
+      <a class="fg-btn" href="{{ url_for('main.inventory') }}">{{ icon('box') }}Inventory</a>
+    {% endcall %}
+
+    {% if item %}
+      <div class="fg-grid fg-grid--2">
+        <section class="fg-card">
+          <header class="fg-card__header">
+            <h2 class="fg-card__title">Current status</h2>
+          </header>
+          {% if assessment %}
+            {{ badge(
+              'fresh' if assessment.status|string == 'Fresh/Normal' else
+              'soon' if assessment.status|string == 'Use Soon' else
+              'check' if assessment.status|string == 'Check Food' else 'fault') }}
+            <p class="fg-card__hint">{{ assessment.message }}</p>
+            {% if assessment.recommendation %}
+              <p class="fg-card__hint"><strong>{{ assessment.recommendation }}</strong></p>
+            {% endif %}
+            <p class="fg-card__hint">
+              Decided by rule {{ assessment.rule }} of six.
+              {% if assessment.zone_level %}
+                This is a condition of the whole storage zone, not of this container.
+              {% endif %}
+            </p>
+            {# SRS 1.6 xvii: storage duration is its own field. #}
+            <p class="fg-card__hint">
+              Stored for {{ days_stored }} day{{ '' if days_stored == 1 else 's' }}
+              {%- if item.storage_date %}, since {{ item.storage_date }}{% endif %}.
+            </p>
+            {% if assessment.status|string == 'Check Food' %}
+              {# Shown only once a person is already being asked to look, and
+                 worded as conditional on what they find. FreshGuard never
+                 decides that food should be thrown away. #}
+              <p class="fg-card__hint">{{ disposal_recommendation }}.</p>
+            {% endif %}
+          {% elif item.state != 'stored' %}
+            <p class="fg-card__hint">
+              This container was recorded as {{ item.state }} on
+              {{ item.state_changed_at or 'an earlier date' }}, so it is no longer being watched.
+            </p>
+          {% else %}
+            <p class="fg-card__hint">No verdict yet: no readings have been recorded for its zone.</p>
+          {% endif %}
+        </section>
+
+        <section class="fg-card">
+          <header class="fg-card__header">
+            <h2 class="fg-card__title">Container label</h2>
+            <p class="fg-card__hint">Print this and stick it on the container.</p>
+          </header>
+          <div class="fg-label-card">
+            <img class="fg-qr" src="{{ url_for('qr.sticker', qr_id=qr_id) }}"
+                 width="140" height="140" alt="QR code for {{ qr_id }}">
+            <div>
+              <p class="fg-label-card__id"><code>{{ qr_id }}</code></p>
+              {% if item and item.rfid_tag %}
+                <p class="fg-card__hint">RFID tag <code>{{ item.rfid_tag }}</code> &middot;
+                  tap it at the fridge to take this item out.</p>
+              {% endif %}
+              <div class="fg-row">
+                <a class="fg-btn" href="{{ url_for('qr.sticker', qr_id=qr_id) }}"
+                   download="{{ qr_id }}.png">{{ icon('download') }}Download label</a>
+                <button class="fg-btn fg-btn--ghost" type="button"
+                        data-copy="{{ qr_id }}">Copy identifier</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    {% else %}
+      <section class="fg-card">
+        <div class="fg-label-card">
+          <img class="fg-qr" src="{{ url_for('qr.sticker', qr_id=qr_id) }}"
+               width="140" height="140" alt="QR code for {{ qr_id }}">
+          <div>
+            <p class="fg-label-card__id"><code>{{ qr_id }}</code></p>
+            <p class="fg-card__hint">
+              Nothing is stored under this identifier yet. Fill in the form below and it becomes
+              this container's label.
+            </p>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if not categories or not zones %}
+      <div class="fg-alert fg-alert--warning">
+        <p class="fg-alert__body">
+          No food categories or storage zones are configured yet. An administrator must add them
+          before items can be stored.
+        </p>
+      </div>
+    {% endif %}
+
+    <section class="fg-card">
+      <h2 class="fg-card__title">{{ 'Item details' if item else 'Store something here' }}</h2>
+
+      <form class="fg-stack" id="fg-item-form" data-qr-id="{{ qr_id }}"
+            data-mode="{{ 'update' if item else 'create' }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+
+        {{ field('name', 'Name', required=True, value=(item.name if item else '')) }}
+
+        <div class="fg-field">
+          <label class="fg-label" for="field-category">Category <span aria-hidden="true">*</span></label>
+          <select class="fg-input" id="field-category" name="category" required>
+            {% for category in categories %}
+              <option value="{{ category }}"
+                {% if item and item.category == category %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fg-grid fg-grid--2">
+          {{ field('quantity', 'Quantity', type='number', required=True,
+                   value=(item.quantity if item else '1')) }}
+          {{ field('unit', 'Unit', value=(item.unit if item else 'pcs'),
+                   hint='For example pcs, kg, L') }}
+        </div>
+
+        <div class="fg-field">
+          <label class="fg-label" for="field-zone_id">Zone <span aria-hidden="true">*</span></label>
+          <select class="fg-input" id="field-zone_id" name="zone_id" required>
+            {% for zone in zones %}
+              <option value="{{ zone.id }}"
+                {% if item and item.zone_id == zone.id %}selected{% endif %}>{{ zone.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fg-grid fg-grid--2">
+          {{ field('manufacture_date', 'Manufactured', type='date',
+                   value=(item.manufacture_date if item and item.manufacture_date else '')) }}
+          {{ field('storage_date', 'Stored', type='date', required=True,
+                   value=(item.storage_date if item else '')) }}
+        </div>
+
+        <div class="fg-grid fg-grid--2">
+          {{ field('expiry_date', 'Use by', type='date',
+                   value=(item.expiry_date if item and item.expiry_date else ''),
+                   hint='Leave blank to use the storage limit') }}
+          {{ field('storage_limit_days', 'Storage limit (days)', type='number',
+                   value=(item.storage_limit_days if item and item.storage_limit_days else ''),
+                   hint='Leave blank to use the category default') }}
+        </div>
+
+        <p class="fg-field__error" id="fg-item-error" hidden role="alert"></p>
+
+        <div class="fg-row">
+          <button class="fg-btn fg-btn--primary" type="submit">
+            {{ 'Save changes' if item else 'Store item' }}
+          </button>
+          <a class="fg-btn" href="{{ url_for('main.inventory') }}">Cancel</a>
+        </div>
+      </form>
+    </section>
+
+    {% if item and item.state == 'stored' %}
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">What happened to it</h2>
+          <p class="fg-card__hint">Recording this keeps it out of the plan and in the report.</p>
+        </header>
+        <div class="fg-row">
+          <button class="fg-btn" type="button" data-state="consumed" data-qr="{{ qr_id }}">
+            {{ icon('check') }}Mark consumed
+          </button>
+          <button class="fg-btn" type="button" data-state="discarded" data-qr="{{ qr_id }}">
+            {{ icon('trash') }}Record disposal
+          </button>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if item %}
+      {# A destructive action and its confirmation are one control in two
+         states, so they share a row that swaps rather than three buttons
+         sitting side by side. The confirmation names the item, so a misclick
+         is caught by reading rather than by remembering what was clicked. #}
+      <section class="fg-card fg-card--danger">
+        <div class="fg-danger">
+          <span class="fg-danger__mark">{{ icon('trash') }}</span>
+          <div class="fg-danger__text">
+            <h2 class="fg-card__title">Remove this item</h2>
+            <p class="fg-card__hint">
+              This takes {{ item.name }} out of the inventory permanently. To record that it
+              was eaten or thrown away instead, use the buttons above.
+            </p>
+          </div>
+          <div class="fg-danger__actions">
+            <button class="fg-btn fg-btn--destructive" type="button" id="fg-delete">
+              {{ icon('trash') }}Remove item
+            </button>
+            <div class="fg-confirm" id="fg-delete-confirm" hidden>
+              <span class="fg-confirm__question">Remove {{ item.name }}?</span>
+              <button class="fg-btn fg-btn--destructive" type="button" id="fg-delete-yes">
+                Yes, remove
+              </button>
+              <button class="fg-btn fg-btn--ghost" type="button" id="fg-delete-no">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/item.js') }}"></script>
+{% endblock %}

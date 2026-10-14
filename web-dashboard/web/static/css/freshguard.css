@@ -1,0 +1,4068 @@
+/* FreshGuard design system.
+ *
+ * The single stylesheet for the whole application. Every colour, radius,
+ * spacing step and shadow is a token on :root; pages compose the component
+ * classes below instead of introducing one-off styles. Templates and scripts
+ * must not carry inline styles or hard-coded colours.
+ *
+ * Tokens are derived from reference/frontend/FreshGuard.html. Where the
+ * reference failed WCAG AA the hue was kept and the lightness reduced until
+ * the pair reached 4.5:1 for text or 3:1 for interactive outlines; those
+ * values are marked "derived" below.
+ *
+ * No CDN and no second framework: the dashboard has to work on a LAN with no
+ * internet. The two typefaces are vendored as woff2 under static/fonts and the
+ * icons are Lucide path data inlined in components.html, so nothing is ever
+ * requested from the internet at runtime.
+ */
+
+/* ------------------------------------------------------------------- fonts */
+/* Inter for the interface and JetBrains Mono for anything that is a
+   measurement: a reading, the mirrored display, a timestamp, an identifier.
+   A number that changes every five seconds must not make the row beside it
+   twitch, and tabular monospaced figures are what stop that.
+
+   Both are variable fonts, so one file covers every weight we use. */
+@font-face {
+  font-family: Inter;
+  src: url("../fonts/inter-variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/jetbrains-mono-variable.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ------------------------------------------------------------------ tokens */
+:root {
+  /* Surfaces. The page is a cool near-neutral and cards are pure white, so a
+     card reads as raised without needing a heavy border. Tinting every
+     surface green was what made the old palette look washed out: the brand
+     colour stops meaning anything when it is behind everything. */
+  --background: #f4f6f4;
+  --foreground: #16211c;
+  --card: #ffffff;
+  --card-foreground: #16211c;
+
+  /* Brand */
+  --primary: #237650;
+  --primary-foreground: #ffffff;
+  --primary-hover: #1a5d3e;
+  --secondary: #eef1ee;
+  --secondary-foreground: #33423a;
+  --accent: #e8f2ea;
+  --accent-foreground: #17533a;
+
+  /* Support */
+  --muted: #f7f9f7;
+  --muted-foreground: #5d6b64;      /* darkened from #7e8984 for AA */
+  --destructive: #b4483a;           /* derived from #ca6558 for AA */
+  --destructive-hover: #8f382c;     /* one step darker, still AA on white */
+  --destructive-foreground: #ffffff;
+
+  /* Lines and controls */
+  --border: #e4e8e5;
+  --input: #d3dbd6;
+  --ring: #4f9a74;                  /* derived from #8bc3a3 for 3:1 */
+
+  /* Shell. The sidebar is a solid card against the page background. */
+  --sidebar: #ffffff;
+  --sidebar-width: 15rem;
+  --header-height: 4.5rem;
+
+  /* The hero banner's gradient, taken from the reference's welcome panel. */
+  --hero-from: #eaf1df;
+  --hero-via: #f1f5e8;
+  --hero-to: #e7eedc;
+  --hero-border: #dfe8d5;
+  --hero-foreground: #375337;
+  --hero-muted: #5c6b52;
+  --hero-accent: #6e8559;
+
+  /* Soft tiles behind the small stat icons. */
+  --tile-neutral: #f0f4ee;
+  --tile-neutral-foreground: #4c6b4a;
+  --tile-amber: #faf4e7;
+  --tile-amber-foreground: #8a6a2c;
+  --tile-red: #fbefea;
+  --tile-red-foreground: #a4553c;
+
+  /* Category tints. A soft, slightly faded set -- the retro-poster palette of
+     the reference boards rather than saturated primaries. Each one is a
+     backdrop for a sticker and a label, never the only thing carrying the
+     meaning: the category is always written out beside it.
+
+     Paired foregrounds are darkened until they clear 4.5:1 on their own tint,
+     so a category name is readable and not merely decorative. */
+  --cat-dairy: #e8f0fb;
+  --cat-dairy-ink: #3a5b86;
+  --cat-cooked: #fdeade;
+  --cat-cooked-ink: #8d5227;
+  --cat-produce: #e6f4e4;
+  --cat-produce-ink: #3f6b3c;
+  --cat-rootveg: #fdeedb;
+  --cat-rootveg-ink: #8a5824;
+  --cat-beverage: #e7f2f4;
+  --cat-beverage-ink: #38676f;
+  --cat-meat: #fce9e9;
+  --cat-meat-ink: #8d4141;
+  --cat-fish: #e9eefb;
+  --cat-fish-ink: #45538c;
+  --cat-bakery: #fbf0dd;
+  --cat-bakery-ink: #7f6026;
+  /* Shelf-stable goods. A muted violet, kept clear of the warm food hues so
+     an ambient item does not read as another kind of fresh food. */
+  --cat-pantry: #f0ecf7;
+  --cat-pantry-ink: #5f5386;
+  --cat-default: #eef0ee;
+  --cat-default-ink: #4f5a53;
+
+  /* The scanner. The mask dims everything outside the reading window so the
+     eye goes to the square; the line sweeps it. */
+  --scan-line: #4ade80;
+  --scan-frame: rgb(255 255 255 / 85%);
+  --scan-mask: rgb(15 21 18 / 55%);
+  --scan-stage: #0d1411;
+
+  /* The mirrored character display. Dark in both themes, because the real
+     16x2 module is a backlit panel and looks the same in a lit kitchen. */
+  --lcd: #14251b;
+  --lcd-foreground: #9fe3b0;
+
+  /* Freshness statuses. Never colour alone: always paired with text. */
+  --status-fresh: #f0f5e8;
+  --status-fresh-foreground: #5e7655;
+  --status-soon: #faf3e3;
+  --status-soon-foreground: #886b35;
+  --status-check: #fcf0e9;
+  --status-check-foreground: #a15d43;
+  --status-fault: #f1edf8;          /* purple, deliberately unlike Fresh */
+  --status-fault-foreground: #75639f;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* Spacing, 4px scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgb(23 63 50 / 6%);
+  --shadow-sm: 0 1px 2px rgb(23 63 50 / 5%), 0 2px 8px rgb(23 63 50 / 5%);
+  --shadow-md: 0 2px 4px rgb(23 63 50 / 5%), 0 8px 24px rgb(23 63 50 / 8%);
+  --shadow-lg: 0 8px 16px rgb(23 63 50 / 8%), 0 24px 56px rgb(23 63 50 / 12%);
+  --shadow-overlay: 0 0 0 100vmax rgb(24 53 34 / 45%);
+
+  /* Type. Both families are vendored under static/fonts; the system stack
+     behind each one is what renders if a font file ever fails to load. */
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", roboto, arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, consolas, "Liberation Mono", monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+}
+
+.dark {
+  --background: #0f1512;
+  --foreground: #e8edea;
+  --card: #161d19;
+  --card-foreground: #e8edea;
+
+  --primary: #3da878;
+  --primary-foreground: #06140d;
+  --primary-hover: #54bd8d;
+  --secondary: #202a24;
+  --secondary-foreground: #d5dfd9;
+  --accent: #14301f;
+  --accent-foreground: #7fd6a4;
+
+  --muted: #1a221d;
+  --muted-foreground: #97a49d;
+  --destructive: #e08573;
+  --destructive-hover: #f0a08e;     /* lighter in the dark, so hover lifts */
+  --destructive-foreground: #1a0d0a;
+
+  --border: #232d27;
+  --input: #2f3b34;
+  --ring: #5fae86;
+
+  --status-fresh: #1d2f22;
+  --status-fresh-foreground: #a8cf9a;
+  --status-soon: #2e2718;
+  --status-soon-foreground: #e0bd77;
+  --status-check: #31211b;
+  --status-check-foreground: #eda98d;
+  --status-fault: #251f33;
+  --status-fault-foreground: #b9a6e0;
+
+  --sidebar: #131a16;
+  --hero-from: #17291d;
+  --hero-via: #1b2f21;
+  --hero-to: #16251b;
+  --hero-border: #27402f;
+  --hero-foreground: #d8e8d2;
+  --hero-muted: #9db396;
+  --hero-accent: #a8c78d;
+
+  --tile-neutral: #1f3325;
+  --tile-neutral-foreground: #9ccb97;
+  --tile-amber: #32291a;
+  --tile-amber-foreground: #e0bd77;
+  --tile-red: #33211c;
+  --tile-red-foreground: #eda98d;
+
+  --lcd: #0f1c15;
+  --lcd-foreground: #9fe3b0;
+
+  /* The same hues, dropped to card-dark and lifted in the ink so they still
+     clear AA against a dark surface. */
+  --cat-dairy: #1c2a3b;
+  --cat-dairy-ink: #a8c6ea;
+  --cat-cooked: #33241a;
+  --cat-cooked-ink: #e8b38a;
+  --cat-produce: #1e2e1d;
+  --cat-produce-ink: #a9cfa4;
+  --cat-rootveg: #33271a;
+  --cat-rootveg-ink: #e6ba86;
+  --cat-beverage: #1b2c2e;
+  --cat-beverage-ink: #9fcbd1;
+  --cat-meat: #321f1f;
+  --cat-meat-ink: #e8a6a6;
+  --cat-fish: #1e2438;
+  --cat-fish-ink: #adb9e6;
+  --cat-bakery: #322a1a;
+  --cat-bakery-ink: #e0c489;
+  --cat-pantry: #272235;
+  --cat-pantry-ink: #c0b3e2;
+  --cat-default: #232a26;
+  --cat-default-ink: #b3bdb7;
+
+  --scan-mask: rgb(0 0 0 / 60%);
+  --scan-stage: #080d0a;
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%), 0 2px 8px rgb(0 0 0 / 30%);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 38%);
+  --shadow-lg: 0 8px 16px rgb(0 0 0 / 40%), 0 24px 56px rgb(0 0 0 / 50%);
+  --shadow-overlay: 0 0 0 100vmax rgb(0 0 0 / 65%);
+}
+
+/* ------------------------------------------------------------------- reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* The browser hides [hidden] with a user-agent rule, and ANY author rule that
+   sets display beats it. Every component here sets display, so without this
+   line a hidden button, banner or row stays on screen: the confirm step of the
+   delete control showed all three of its buttons at once because of exactly
+   that. One guard, rather than a patch per component. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 var(--space-2);
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+
+p { margin: 0 0 var(--space-3); }
+
+a {
+  color: var(--primary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* One visible focus treatment everywhere, keyboard users included. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Screen-reader-only text that still reaches assistive technology. */
+.fg-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fg-skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -3rem;
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: top 0.15s ease;
+}
+
+.fg-skip-link:focus {
+  top: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ layout */
+.fg-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.fg-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: var(--space-5) var(--space-4) var(--space-8);
+}
+
+.fg-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fg-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+.fg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.fg-spread {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fg-center {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .fg-main { padding-inline: var(--space-6); }
+  .fg-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 960px) {
+  .fg-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fg-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* --------------------------------------------------------------- nav, logo */
+.fg-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.fg-nav__brand {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.fg-nav__brand img {
+  width: 28px;
+  height: 28px;
+}
+
+.fg-nav__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fg-nav__link {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.fg-nav__link:hover {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.fg-nav__link[aria-current="page"] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.fg-nav__end {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------- cards */
+.fg-card {
+  padding: var(--space-6);
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* The filter panel is a control surface, not content: flatter, and it sits
+   directly above the table it governs. */
+.fg-card--filters {
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-xs);
+}
+
+.fg-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.fg-card__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.fg-card__hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-stat__label {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-stat__value {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.fg-stat__unit {
+  margin-left: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+/* ----------------------------------------------------------------- buttons */
+.fg-btn {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;                 /* comfortable touch target */
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--secondary-foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.fg-btn:hover {
+  background: var(--secondary);
+}
+
+.fg-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fg-btn--primary {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.fg-btn--primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.fg-btn--secondary {
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  border-color: var(--secondary);
+}
+
+.fg-btn--destructive {
+  color: var(--destructive-foreground);
+  background: var(--destructive);
+  border-color: var(--destructive);
+}
+
+/* Without this the generic .fg-btn hover wins and a delete control goes pale
+   grey the moment you point at it, which reads as disabled on exactly the
+   button that most needs to keep saying "this is destructive". */
+.fg-btn--destructive:hover,
+.fg-btn--destructive:focus-visible {
+  color: var(--destructive-foreground);
+  background: var(--destructive-hover);
+  border-color: var(--destructive-hover);
+}
+
+.fg-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.fg-btn--ghost:hover {
+  background: var(--secondary);
+}
+
+.fg-btn--block {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ badges */
+.fg-badge {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* The dot is decoration; the label text carries the meaning. */
+.fg-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentcolor;
+  flex-shrink: 0;
+}
+
+.fg-badge--fresh {
+  background: var(--status-fresh);
+  color: var(--status-fresh-foreground);
+}
+
+.fg-badge--soon {
+  background: var(--status-soon);
+  color: var(--status-soon-foreground);
+}
+
+.fg-badge--check {
+  background: var(--status-check);
+  color: var(--status-check-foreground);
+}
+
+.fg-badge--fault {
+  background: var(--status-fault);
+  color: var(--status-fault-foreground);
+}
+
+/* Fault is also marked with a square, so it reads without colour. */
+.fg-badge--fault::before {
+  border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------- forms */
+.fg-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fg-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.fg-input {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--text-base);
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-sm);
+}
+
+.fg-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.fg-input:disabled {
+  background: var(--muted);
+  cursor: not-allowed;
+}
+
+.fg-field__hint {
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-field__error {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--destructive);
+}
+
+/* ------------------------------------------------------------------ tables */
+.fg-table-wrap {
+  overflow-x: auto;
+}
+
+.fg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.fg-table th {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: var(--muted);
+  border-block: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.fg-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  /* Middle, not the baseline default: a cell holding a sticker is much taller
+     than one holding a date, and baseline alignment pushed the short cells
+     down so no two columns in a row sat on the same line. */
+  vertical-align: middle;
+}
+
+/* Numbers align on their right edge and use tabular figures, so the digits
+   in a column line up and can be compared by eye without reading them. Text
+   columns stay left: a ragged right edge is easier to scan than a ragged
+   left one. */
+.fg-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Dates and timestamps: monospaced and tabular so the parts line up down the
+   column -- the year under the year, the day under the day. In a
+   proportional face "1" is narrower than "0", so a date column reads as a
+   jumble however carefully the cells are padded. */
+.fg-table__time {
+  white-space: nowrap;
+}
+
+/* The monospaced face is for the values, not the heading: a column header set
+   in mono reads as data and spaces its words oddly. The class still sits on
+   the th so the column keeps one alignment rule. */
+td.fg-table__time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ------------------------------------------------------------------ alerts */
+.fg-alert {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-xs);
+  font-size: var(--text-sm);
+}
+
+.fg-alert__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.fg-alert__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fg-alert__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.fg-alert__body {
+  margin: 0;
+}
+
+.fg-alert--info {
+  border-color: color-mix(in srgb, var(--status-fresh-foreground) 22%, var(--border));
+}
+
+.fg-alert--info .fg-alert__mark {
+  background: var(--status-fresh);
+  color: var(--status-fresh-foreground);
+}
+
+.fg-alert--info .fg-alert__title {
+  color: var(--status-fresh-foreground);
+}
+
+.fg-alert--warning {
+  border-color: color-mix(in srgb, var(--status-soon-foreground) 22%, var(--border));
+}
+
+.fg-alert--warning .fg-alert__mark {
+  background: var(--status-soon);
+  color: var(--status-soon-foreground);
+}
+
+.fg-alert--warning .fg-alert__title {
+  color: var(--status-soon-foreground);
+}
+
+.fg-alert--critical {
+  border-color: color-mix(in srgb, var(--status-check-foreground) 22%, var(--border));
+}
+
+.fg-alert--critical .fg-alert__mark {
+  background: var(--status-check);
+  color: var(--status-check-foreground);
+}
+
+.fg-alert--critical .fg-alert__title {
+  color: var(--status-check-foreground);
+}
+
+.fg-alert--fault {
+  border-color: color-mix(in srgb, var(--status-fault-foreground) 22%, var(--border));
+}
+
+.fg-alert--fault .fg-alert__mark {
+  background: var(--status-fault);
+  color: var(--status-fault-foreground);
+}
+
+.fg-alert--fault .fg-alert__title {
+  color: var(--status-fault-foreground);
+}
+
+/* ------------------------------------------------------- auth, disclaimer */
+.fg-auth {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.fg-auth__intro {
+  margin-bottom: var(--space-5);
+  text-align: center;
+}
+
+.fg-auth__brand {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.fg-auth__brand img {
+  width: 36px;
+  height: 36px;
+}
+
+.fg-footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+/* Required on every page: FreshGuard does not certify food safety. */
+.fg-disclaimer {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ------------------------------------------------------------- dashboard */
+.fg-banner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--status-fault-foreground);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--status-fault);
+  color: var(--status-fault-foreground);
+  font-weight: 500;
+}
+
+
+.fg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  margin-right: var(--space-2);
+}
+
+.fg-dot--online { background: var(--status-fresh-foreground); }
+.fg-dot--offline { background: var(--status-check-foreground); }
+
+.fg-chart {
+  position: relative;
+  width: 100%;
+  height: 260px;
+}
+
+.fg-empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.fg-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fg-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.fg-list__title { font-weight: 600; }
+
+.fg-list__hint {
+  width: 100%;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+/* --------------------------------------------------------------- filters */
+.fg-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.fg-chip {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.fg-chip:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.fg-chip[aria-pressed="true"] {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.fg-chip[aria-pressed="true"]:hover {
+  background: var(--primary-hover);
+  color: var(--primary-foreground);
+}
+
+/* ----------------------------------------------------------------- toast */
+.fg-toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-4);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(30rem, calc(100vw - 2 * var(--space-4)));
+  transform: translateX(-50%);
+}
+
+/* ------------------------------------------------------------- QR scanner */
+.fg-scanner {
+  width: 100%;
+  max-width: 24rem;
+  margin-inline: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.fg-qr-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.fg-qr-grid img {
+  width: 100%;
+  height: auto;
+  background: #fff;
+  border-radius: var(--radius-sm);
+}
+
+/* --------------------------------------------------------- theme control */
+.fg-theme-toggle {
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+}
+
+/* ==========================================================================
+   Application shell: a fixed sidebar with a header bar beside it.
+   Ported from reference/frontend/, rebuilt on the tokens above.
+   ========================================================================== */
+.fg-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+}
+
+.fg-sidebar[data-open="true"] {
+  transform: translateX(0);
+  box-shadow: var(--shadow-overlay);
+}
+
+.fg-brand {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.fg-brand__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.fg-brand__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fg-brand__dot {
+  margin-left: -0.2rem;
+  color: var(--hero-accent);
+}
+
+
+
+.fg-profile small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+.fg-nav-label {
+  margin: var(--space-6) 0 var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.fg-sidebar__nav {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fg-sidebar__link {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  position: relative;
+  min-height: 42px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.fg-sidebar__link:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.fg-sidebar__link:hover {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.fg-sidebar__link[aria-current="page"] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 600;
+}
+
+.fg-sidebar__link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-3) * -1);
+  width: 3px;
+  height: 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+}
+
+.fg-sidebar__count {
+  margin-left: auto;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--status-soon);
+  color: var(--status-soon-foreground);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.fg-sidebar__bottom {
+  margin-top: auto;
+  padding-top: var(--space-6);
+}
+
+/* The promise the project is built on, kept in view. */
+.fg-eco {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.fg-eco__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.fg-eco strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.fg-eco p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+
+.fg-profile {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  text-align: left;
+}
+
+.fg-profile:hover {
+  background: var(--secondary);
+}
+
+.fg-profile__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fg-profile__text strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fg-profile form {
+  margin: 0;
+}
+
+.fg-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------- app pane */
+.fg-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.fg-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--header-height);
+  padding: var(--space-3) var(--space-4);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.fg-crumb {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-crumb strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.fg-header__end {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.fg-pill {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.fg-icon-btn {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.fg-icon-btn:hover {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.fg-icon-btn__count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 1.05rem;
+  padding: 0 3px;
+  border-radius: var(--radius-pill);
+  background: var(--status-check-foreground);
+  color: var(--card);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.05rem;
+}
+
+/* Stroked line icons, coloured by the text around them. */
+.fg-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ------------------------------------------------------------- hero panel */
+.fg-hero {
+  display: flex;
+  position: relative;
+  gap: var(--space-4);
+  align-items: center;
+  overflow: hidden;
+  min-height: 9rem;
+  padding: var(--space-5);
+  border: 1px solid var(--hero-border);
+  border-radius: var(--radius);
+  background: linear-gradient(110deg, var(--hero-from) 0%, var(--hero-via) 55%, var(--hero-to) 100%);
+  color: var(--hero-foreground);
+}
+
+.fg-hero__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hero-accent);
+}
+
+.fg-hero h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.03em;
+  color: var(--hero-foreground);
+}
+
+.fg-hero p {
+  max-width: 32rem;
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--hero-muted);
+}
+
+.fg-hero__tag {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-left: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--hero-border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  vertical-align: middle;
+  color: var(--hero-accent);
+}
+
+.fg-hero__art {
+  position: absolute;
+  right: -1rem;
+  bottom: -1.5rem;
+  width: 13rem;
+  height: 9rem;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* -------------------------------------------------------------- stat tile */
+.fg-stat__top {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-tile {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--tile-neutral);
+  color: var(--tile-neutral-foreground);
+}
+
+.fg-tile--amber {
+  background: var(--tile-amber);
+  color: var(--tile-amber-foreground);
+}
+
+.fg-tile--red {
+  background: var(--tile-red);
+  color: var(--tile-red-foreground);
+}
+
+.fg-tile--fault {
+  background: var(--status-fault);
+  color: var(--status-fault-foreground);
+}
+
+.fg-stat__foot {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------------ sensor tile */
+.fg-sensor {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted);
+  min-width: 0;
+  transition: border-color 120ms ease;
+}
+
+.fg-sensor:hover {
+  border-color: var(--input);
+}
+
+.fg-sensor__label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-sensor__value {
+  margin: var(--space-3) 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.fg-sensor__value small {
+  margin-left: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.fg-sensor__track {
+  position: relative;
+  height: 4px;
+  margin: var(--space-3) 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.fg-sensor__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--status-fresh-foreground);
+}
+
+/* Discrete widths: presentation stays in the stylesheet, and the bar needs
+   no JavaScript to draw itself. */
+.fg-sensor__fill--w0 {
+  width: 0%;
+}
+
+.fg-sensor__fill--w10 {
+  width: 10%;
+}
+
+.fg-sensor__fill--w20 {
+  width: 20%;
+}
+
+.fg-sensor__fill--w30 {
+  width: 30%;
+}
+
+.fg-sensor__fill--w40 {
+  width: 40%;
+}
+
+.fg-sensor__fill--w50 {
+  width: 50%;
+}
+
+.fg-sensor__fill--w60 {
+  width: 60%;
+}
+
+.fg-sensor__fill--w70 {
+  width: 70%;
+}
+
+.fg-sensor__fill--w80 {
+  width: 80%;
+}
+
+.fg-sensor__fill--w90 {
+  width: 90%;
+}
+
+.fg-sensor__fill--w100 {
+  width: 100%;
+}
+
+.fg-sensor__fill--warn {
+  background: var(--status-soon-foreground);
+}
+
+.fg-sensor__fill--bad {
+  background: var(--status-check-foreground);
+}
+
+.fg-sensor__fill--fault {
+  background: var(--status-fault-foreground);
+}
+
+.fg-sensor__foot {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+.fg-sensor__foot b {
+  font-weight: 600;
+  color: var(--status-fresh-foreground);
+}
+
+.fg-sensor__foot b.is-bad {
+  color: var(--status-check-foreground);
+}
+
+.fg-sensor__foot b.is-fault {
+  color: var(--status-fault-foreground);
+}
+
+.fg-door-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-door-row__end {
+  margin-left: auto;
+  font-size: var(--text-xs);
+}
+
+/* -------------------------------------------------------------- food cell */
+.fg-food {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+}
+
+/* Only the name carries the link's underline. The whole cell is the click
+   target, so wrapping it in an anchor underlined the quantity and the
+   category tag too, which read as three separate links in one cell. */
+.fg-table a:has(.fg-food) {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fg-table a .fg-food__name {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.fg-table a:hover .fg-food__name {
+  text-decoration-thickness: 2px;
+}
+
+.fg-food__avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  font-size: var(--text-lg);
+}
+
+.fg-food strong {
+  display: block;
+  font-weight: 600;
+}
+
+.fg-food small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+/* A gap between the amount and the tag rather than a middle dot. The dot was
+   printed unconditionally, so a row with no unit ended on a dangling
+   separator with nothing after it. */
+.fg-food__meta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fg-food__name {
+  display: block;
+  font-weight: 600;
+}
+
+/* The artwork sits behind the copy, so it only appears once there is room. */
+@media (max-width: 47.99rem) {
+  .fg-hero__art {
+    display: none;
+  }
+
+  .fg-hero {
+    min-height: 0;
+  }
+}
+
+/* ------------------------------------------------------------- page head */
+/* Every page opens the same way, so the eye lands in the same place however
+   deep into the app you are. */
+.fg-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.fg-page-head h1 {
+  margin: var(--space-2) 0 0;
+}
+
+.fg-page-head__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.fg-page-head__sub {
+  margin: var(--space-2) 0 0;
+  max-width: 48ch;
+  color: var(--muted-foreground);
+}
+
+.fg-page-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fg-subhead {
+  margin: var(--space-5) 0 var(--space-3);
+  font-size: 0.95rem;
+}
+
+/* ------------------------------------------------------------------ note */
+/* Context the reader needs but should not have to fight for: what a page can
+   and cannot tell them. */
+.fg-note {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+
+.fg-note__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 1px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.fg-note strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ fact */
+.fg-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fg-fact:last-of-type {
+  border-bottom: 0;
+}
+
+.fg-fact__label {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.fg-fact__value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-fact__value--warn {
+  color: var(--status-soon-foreground);
+}
+
+.fg-fact__value--bad {
+  color: var(--status-check-foreground);
+}
+
+/* ----------------------------------------------------------- device state */
+.fg-state {
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-state--fault {
+  color: var(--status-check-foreground);
+  font-weight: 600;
+}
+
+.fg-state--unknown {
+  color: var(--muted-foreground);
+}
+
+/* --------------------------------------------------------------- the LCD */
+/* A mirror of the 16x2 character display. Monospaced and fixed at sixteen
+   columns, so a line that would not fit on the real hardware does not fit
+   here either. */
+.fg-lcd {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--lcd);
+  color: var(--lcd-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.fg-lcd__line {
+  display: block;
+}
+
+/* --------------------------------------------------------------- planner */
+.fg-plan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fg-plan__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fg-plan__item:last-child {
+  border-bottom: 0;
+}
+
+.fg-plan__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--tile-neutral);
+  font-size: 1.35rem;
+}
+
+.fg-plan__body {
+  flex: 1 1 14rem;
+}
+
+.fg-plan__name {
+  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+}
+
+.fg-plan__meta,
+.fg-plan__hint {
+  margin: 0 0 var(--space-2);
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.fg-plan__hint {
+  margin: var(--space-2) 0 0;
+}
+
+.fg-plan__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* --------------------------------------------------------------- reports */
+.fg-report-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 0.85rem;
+}
+
+.fg-report-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-report-bar {
+  margin-top: var(--space-2);
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.fg-report-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+}
+
+/* A pill that carries a mode rather than decorating one. */
+.fg-pill--strong {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------- selects and search */
+/* A compact control that sits inside a card header, next to the heading it
+   changes. Styled from the same tokens as .fg-input so the two match. */
+.fg-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.fg-select:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.fg-card__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* A search box with its icon inside. The icon is decorative; the label is
+   what a screen reader announces. */
+.fg-search {
+  position: relative;
+  flex: 1 1 14rem;
+}
+
+.fg-search .fg-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.fg-search input {
+  padding-left: calc(var(--space-3) * 2 + 19px);
+}
+
+.fg-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------- activity log */
+/* The outbox, read as a feed. Monospaced timestamps so the column lines up
+   and a long quiet period is obvious at a glance. */
+.fg-log {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.fg-log__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+.fg-log__line:last-child {
+  border-bottom: 0;
+}
+
+.fg-log__time {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.fg-log__entity {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fg-log__state {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.fg-log__state--pending {
+  color: var(--status-soon-foreground);
+}
+
+.fg-log__state--failed {
+  color: var(--status-check-foreground);
+}
+
+.fg-log__state--synced {
+  color: var(--status-fresh-foreground);
+}
+
+/* -------------------------------------------------------------- severity */
+.fg-severity {
+  text-transform: capitalize;
+}
+
+.fg-severity--critical {
+  color: var(--status-check-foreground);
+  font-weight: 600;
+}
+
+.fg-severity--warning {
+  color: var(--status-soon-foreground);
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------- checkbox */
+.fg-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------- decision rules */
+/* The order the engine applies, numbered, so an administrator can see what a
+   limit they are about to change will actually do. */
+.fg-rules {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rule;
+}
+
+.fg-rules__item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fg-rules__item:last-child {
+  border-bottom: 0;
+}
+
+.fg-rules__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--tile-neutral);
+  color: var(--tile-neutral-foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.fg-rules__item p {
+  margin: var(--space-1) 0 0;
+}
+
+/* -------------------------------------------------- container label card */
+.fg-label-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.fg-label-card__id {
+  margin: 0 0 var(--space-3);
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+/* ----------------------------------------------------------- wide screens */
+@media (min-width: 60rem) {
+  .fg-sidebar {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .fg-app {
+    margin-left: var(--sidebar-width);
+  }
+
+  .fg-menu-btn {
+    display: none;
+  }
+
+  .fg-main {
+    padding-inline: var(--space-6);
+  }
+}
+
+/* ------------------------------------------------------------ theme toggle */
+/* Each glyph names what pressing does, so only the other theme's icon shows. */
+.fg-theme-icon {
+  display: none;
+}
+
+.fg-theme-icon--light {
+  display: inline-flex;
+}
+
+.dark .fg-theme-icon--light {
+  display: none;
+}
+
+.dark .fg-theme-icon--dark {
+  display: inline-flex;
+}
+
+.fg-icon-btn--sm {
+  width: 34px;
+  height: 34px;
+}
+
+/* ------------------------------------------------------------------ toasts */
+/* A toast confirms something the person just did, so it is a small, solid,
+   self-contained object that slides in and leaves. It is deliberately not the
+   alert component: an alert is a condition in the fridge that persists, and
+   the two should never be mistaken for one another. */
+.fg-toast {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  animation: fg-toast-in 180ms ease-out;
+}
+
+.fg-toast__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--status-fresh);
+  color: var(--status-fresh-foreground);
+}
+
+.fg-toast--critical .fg-toast__mark {
+  background: var(--status-check);
+  color: var(--status-check-foreground);
+}
+
+.fg-toast--warning .fg-toast__mark {
+  background: var(--status-soon);
+  color: var(--status-soon-foreground);
+}
+
+.fg-toast__body {
+  flex: 1;
+  min-width: 0;
+}
+
+@keyframes fg-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* A person who has asked for less motion gets the toast without the slide. */
+@media (prefers-reduced-motion: reduce) {
+  .fg-toast {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------ filter rows */
+/* Each filter is its own labelled row with a rule above it. Stacked without
+   labels the two groups read as one broken set of tabs, which is exactly how
+   they looked before. */
+.fg-filter-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: baseline;
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.fg-filter-row__label {
+  flex-shrink: 0;
+  width: 3.5rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.fg-toolbar__field {
+  flex-shrink: 0;
+}
+
+@media (max-width: 40rem) {
+  .fg-filter-row {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .fg-filter-row__label {
+    width: auto;
+  }
+}
+
+/* ------------------------------------------------------- machine-readable */
+/* Identifiers, timestamps and raw values are set in the monospaced face: they
+   are read character by character and compared against each other, not read
+   as prose. */
+code,
+.fg-table td code,
+.fg-log__time,
+.fg-fact__value,
+.fg-report-row strong,
+.fg-alert__time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+code {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-size: 0.8125em;
+}
+
+.fg-alert__time {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------- destructive block */
+/* A remove control is set apart from the rest of the page: its own tint, its
+   own mark, and its confirmation in place of the trigger rather than beside
+   it, so the two can never both be on screen. */
+.fg-card--danger {
+  border-color: color-mix(in srgb, var(--destructive) 25%, var(--border));
+  background: color-mix(in srgb, var(--destructive) 3%, var(--card));
+}
+
+.fg-danger {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.fg-danger__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--destructive) 12%, var(--card));
+  color: var(--destructive);
+}
+
+.fg-danger__text {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.fg-danger__text .fg-card__title {
+  margin-bottom: var(--space-1);
+}
+
+.fg-danger__text p {
+  margin: 0;
+}
+
+.fg-danger__actions {
+  flex-shrink: 0;
+}
+
+.fg-confirm {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--destructive);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.fg-confirm__question {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--destructive);
+}
+
+/* A ghost button carries no fill, but it still has to look like a control:
+   a visible edge on hover and a real one at rest, or it reads as stray text. */
+.fg-btn--ghost {
+  border-color: transparent;
+}
+
+.fg-btn--ghost:hover {
+  border-color: var(--border);
+  background: var(--secondary);
+}
+
+/* Cards in a row match heights, so a short one does not leave a ragged edge
+   beside a tall one. */
+.fg-grid > .fg-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================== scanner page */
+/* The front door. Someone is standing at the fridge holding a carton, so the
+   page is a kiosk: no sidebar, no breadcrumb, one thing to do. */
+/* The kiosk is an appliance. It occupies the screen exactly once and never
+   scrolls: a fridge-door panel that moves under a finger reads as a web page
+   somebody mounted, not as a device. Everything inside is sized against the
+   viewport so it fits at 800x480 and still fills 1920x1080.
+
+   The lock is on the body, because that is the element that would otherwise
+   scroll, and only when the kiosk class is present -- the dashboard is a
+   document and is meant to scroll. */
+.fg-body--kiosk {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.fg-kiosk {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* The shell's <main> has to pass the height straight through, or the page
+   inside it sizes to its content and leaves the bottom of the screen empty
+   while the lock quietly clips whatever overflowed. */
+.fg-kiosk > .fg-main {
+  min-height: 0;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* The shell's footer carries the safety disclaimer on every ordinary page.
+   Both kiosk pages already carry their own, in a place that suits a fixed
+   screen, so leaving this one in would print it twice -- and on a page that
+   cannot scroll, the second copy is simply clipped and never seen. */
+.fg-kiosk > .fg-footer {
+  display: none;
+}
+
+.fg-scan-page {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-5);
+  height: 100dvh;
+  max-width: 100rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+  /* The rows must be free to shrink below their content, or a long row makes
+     the grid taller than the screen and the lock above just clips it. */
+  min-height: 0;
+}
+
+.fg-scan-page__top {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fg-scan-page__state {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* One centred column on a small panel, where anything beside the camera
+   competes with it. On a laptop or a landscape tablet there is room for the
+   camera and the two keyboard-free paths side by side, which is what stops a
+   1920-wide screen looking like a phone layout stretched out. */
+.fg-scan-page__body {
+  display: grid;
+  gap: var(--space-6);
+  align-content: center;
+  justify-items: center;
+  grid-template-columns: 1fr;
+  min-height: 0;
+  text-align: center;
+}
+
+.fg-scan-page__intro h1 {
+  margin: 0 0 var(--space-3);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.fg-scan-page__sub {
+  max-width: 48ch;
+  margin: 0 auto;
+  color: var(--muted-foreground);
+}
+
+.fg-scan-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin: 0;
+}
+
+.fg-scan-summary__item {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-scan-summary__item strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.fg-scan-summary__item--soon strong { color: var(--status-soon-foreground); }
+.fg-scan-summary__item--check strong { color: var(--status-check-foreground); }
+
+/* ------------------------------------------------------------ the camera */
+.fg-scanner-stage {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+  width: 100%;
+}
+
+.fg-scanner {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  /* Capped against the viewport as well as in absolute terms, so the two
+     entry paths below it stay on screen on a laptop and on the tablet this
+     is meant to run on. */
+  max-width: min(32rem, 62vh);
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--scan-stage);
+  box-shadow: var(--shadow-lg);
+}
+
+.fg-scanner__viewport,
+.fg-scanner__viewport video,
+.fg-scanner__viewport canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The reading window: a square hole in a dim mask, drawn with one huge ring
+   shadow so there is no second element to keep in sync. */
+.fg-scanner__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.fg-scanner__frame {
+  position: relative;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 100vmax var(--scan-mask);
+}
+
+/* Four corner brackets rather than a full outline: the corners are what a
+   person aligns a label against. */
+.fg-scanner__frame::before,
+.fg-scanner__frame::after {
+  content: "";
+  position: absolute;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 3px solid var(--scan-frame);
+}
+
+.fg-scanner__frame::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: var(--radius);
+}
+
+.fg-scanner__frame::after {
+  right: -1px;
+  bottom: -1px;
+  border-top: 0;
+  border-left: 0;
+  border-bottom-right-radius: var(--radius);
+}
+
+.fg-scanner__line {
+  position: absolute;
+  left: 19%;
+  width: 62%;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, transparent, var(--scan-line), transparent);
+  box-shadow: 0 0 12px var(--scan-line);
+  opacity: 0;
+}
+
+/* The sweep runs only while the camera is actually live, so a still frame is
+   never dressed up as a working scanner. */
+.fg-scanner[data-state="scanning"] .fg-scanner__line {
+  opacity: 1;
+  animation: fg-scan-sweep 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes fg-scan-sweep {
+  from { top: 19%; }
+  to   { top: 81%; }
+}
+
+/* A found code stops the sweep and turns the frame green: motion stopping is
+   the signal, not a colour change alone. */
+.fg-scanner[data-state="found"] {
+  --scan-frame: var(--scan-line);
+}
+
+.fg-scanner[data-state="found"] .fg-scanner__line {
+  opacity: 0;
+  animation: none;
+}
+
+.fg-scanner__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: var(--space-3);
+  place-content: center;
+  justify-items: center;
+  color: var(--scan-frame);
+  text-align: center;
+}
+
+.fg-scanner__placeholder .fg-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 0.7;
+}
+
+.fg-scanner[data-state="scanning"] .fg-scanner__placeholder,
+.fg-scanner[data-state="found"] .fg-scanner__placeholder {
+  display: none;
+}
+
+.fg-scanner__status {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--destructive);
+}
+
+.fg-scanner__controls {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.fg-scan-alt {
+  display: grid;
+  gap: var(--space-4);
+  align-items: end;
+  justify-items: center;
+  width: 100%;
+  max-width: 40rem;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+/* "or" on a rule. Decoration, so it is hidden from assistive technology and
+   the two paths simply read as two paths. */
+.fg-scan-alt__divider {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.fg-scan-alt__divider::before,
+.fg-scan-alt__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.fg-scan-alt__add {
+  width: 100%;
+  justify-content: center;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.fg-scan-alt__add:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: var(--primary-foreground);
+}
+
+.fg-scan-alt > :last-child {
+  justify-self: center;
+}
+
+.fg-scan-manual {
+  width: 100%;
+  text-align: left;
+}
+
+.fg-scan-manual__row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.fg-scan-manual__row .fg-input {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.fg-scan-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.fg-scan-page__actions .fg-disclaimer {
+  margin: 0;
+}
+
+.fg-scan-page__actions .fg-disclaimer {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+.fg-btn--lg {
+  min-height: 52px;
+  padding-inline: var(--space-6);
+  font-size: var(--text-base);
+}
+
+/* A sweeping line is exactly the motion that causes trouble for people who
+   have asked for less of it, so it becomes a static centre rule. */
+@media (prefers-reduced-motion: reduce) {
+  .fg-scanner[data-state="scanning"] .fg-scanner__line {
+    top: 50%;
+    animation: none;
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 63.999rem) {
+  .fg-scan-alt {
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--space-5);
+  }
+
+  .fg-scan-alt__divider {
+    flex-direction: column;
+    width: auto;
+    align-self: stretch;
+    padding-block: var(--space-1);
+  }
+
+  .fg-scan-alt__divider::before,
+  .fg-scan-alt__divider::after {
+    width: 1px;
+    height: auto;
+  }
+
+  .fg-scan-alt__add {
+    width: auto;
+  }
+}
+
+/* ============================================================ step wizard */
+.fg-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-6);
+  padding: 0 0 var(--space-5);
+  border-bottom: 1px solid var(--border);
+  list-style: none;
+}
+
+.fg-steps__step {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.fg-steps__step + .fg-steps__step::before {
+  content: "";
+  width: 1.25rem;
+  height: 1px;
+  margin-right: var(--space-2);
+  background: var(--border);
+}
+
+.fg-steps__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.fg-steps__step[aria-current="step"] {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.fg-steps__step[aria-current="step"] .fg-steps__dot {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.fg-steps__step.is-done {
+  color: var(--foreground);
+}
+
+.fg-steps__step.is-done .fg-steps__dot {
+  border-color: var(--primary);
+  background: var(--accent);
+  color: var(--primary);
+}
+
+/* Hidden on a narrow screen: five names do not fit, and the numbered dots
+   still say where you are. */
+@media (max-width: 34rem) {
+  .fg-steps__name {
+    display: none;
+  }
+}
+
+.fg-step {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A fieldset cannot simply become a grid without moving its legend, so the
+   space between a step's fields is put on the fields themselves. */
+.fg-step > * + .fg-field,
+.fg-step > * + .fg-grid {
+  margin-top: var(--space-4);
+}
+
+.fg-step__title {
+  padding: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.fg-step__hint {
+  margin: var(--space-2) 0 var(--space-5);
+  max-width: 52ch;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.fg-wizard__actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.fg-wizard__spacer {
+  flex: 1;
+}
+
+.fg-review {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  background: var(--muted);
+}
+
+.fg-fact__value--muted {
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+
+.fg-input--mono {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+/* ================================================================ dialog */
+.fg-dialog {
+  width: min(28rem, calc(100vw - 2 * var(--space-4)));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-lg);
+}
+
+.fg-dialog::backdrop {
+  background: var(--scan-mask);
+}
+
+.fg-dialog__head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.fg-dialog__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.fg-dialog__body {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-5);
+}
+
+/* The sticker and the verdict together, so the first thing read is what the
+   thing is and how it is doing, not a table of fields.
+
+   Tinted by the VERDICT, never by the food's category. Tinting it by category
+   put a green panel behind a "Check Food" badge for anything in produce, so
+   the colour and the words disagreed on the one screen where a person decides
+   whether to eat something. The sticker still carries the category. */
+.fg-dialog__lead {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  margin: 0;
+  padding: var(--space-5);
+  background: var(--lead-tint, var(--muted));
+  text-align: left;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The sticker sits above the verdict in the panel, not beside it: the column
+   is narrow and a row would squeeze the message into a ribbon. */
+.fg-dialog__lead .fg-sticker {
+  width: 4rem;
+  height: 4rem;
+}
+
+.fg-dialog__lead--fresh { --lead-tint: var(--status-fresh); --lead-ink: var(--status-fresh-foreground); }
+.fg-dialog__lead--soon { --lead-tint: var(--status-soon); --lead-ink: var(--status-soon-foreground); }
+.fg-dialog__lead--check { --lead-tint: var(--status-check); --lead-ink: var(--status-check-foreground); }
+.fg-dialog__lead--fault { --lead-tint: var(--status-fault); --lead-ink: var(--status-fault-foreground); }
+
+.fg-dialog__lead .fg-dialog__advice {
+  margin: var(--space-2) 0 0;
+  color: var(--lead-ink, var(--foreground));
+  font-weight: 500;
+}
+
+.fg-dialog__advice {
+  margin: 0;
+  text-align: left;
+}
+
+.fg-dialog__advice--strong {
+  font-weight: 600;
+}
+
+/* The disposal wording and the zone-level note are context, not the verdict,
+   so they sit quieter than the line above them. */
+.fg-dialog__advice--quiet {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.fg-dialog__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--muted);
+}
+
+/* An outcome is a record of what a person did, so it is stated plainly and
+   never coloured as though it were a verdict on the food. */
+.fg-outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-size: var(--text-xs);
+  text-transform: capitalize;
+}
+
+.fg-outcome--discarded {
+  background: var(--status-soon);
+  color: var(--status-soon-foreground);
+}
+
+/* ========================================================= category marks */
+/* A sticker sits on its category's tint, so a row is scannable by colour and
+   shape before any word is read -- and the word is always there too, because
+   colour alone is never the signal. */
+.fg-sticker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--cat-default);
+}
+
+.fg-sticker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fg-sticker--sm {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+}
+
+.fg-sticker--md {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.fg-sticker--lg {
+  width: 5rem;
+  height: 5rem;
+  border-radius: var(--radius-lg);
+}
+
+/* A category class names its pair once; everything inside it then reads the
+   same two aliases. A category with no class of its own, or a tag outside a
+   categorised block, falls through to the neutral pair. */
+.fg-cat-dairy    { --cat-tint: var(--cat-dairy);    --cat-ink: var(--cat-dairy-ink); }
+.fg-cat-cooked   { --cat-tint: var(--cat-cooked);   --cat-ink: var(--cat-cooked-ink); }
+.fg-cat-produce  { --cat-tint: var(--cat-produce);  --cat-ink: var(--cat-produce-ink); }
+.fg-cat-rootveg  { --cat-tint: var(--cat-rootveg);  --cat-ink: var(--cat-rootveg-ink); }
+.fg-cat-beverage { --cat-tint: var(--cat-beverage); --cat-ink: var(--cat-beverage-ink); }
+.fg-cat-meat     { --cat-tint: var(--cat-meat);     --cat-ink: var(--cat-meat-ink); }
+.fg-cat-fish     { --cat-tint: var(--cat-fish);     --cat-ink: var(--cat-fish-ink); }
+.fg-cat-bakery   { --cat-tint: var(--cat-bakery);   --cat-ink: var(--cat-bakery-ink); }
+.fg-cat-pantry   { --cat-tint: var(--cat-pantry);   --cat-ink: var(--cat-pantry-ink); }
+
+.fg-cat-dairy    .fg-sticker,
+.fg-cat-cooked   .fg-sticker,
+.fg-cat-produce  .fg-sticker,
+.fg-cat-rootveg  .fg-sticker,
+.fg-cat-beverage .fg-sticker,
+.fg-cat-meat     .fg-sticker,
+.fg-cat-fish     .fg-sticker,
+.fg-cat-bakery   .fg-sticker,
+.fg-cat-pantry   .fg-sticker {
+  background: var(--cat-tint, var(--cat-default));
+}
+
+/* The category name, as a small tag in its own colour. Colour is never the
+   only signal: the name is right there in the tag. */
+.fg-cat-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--cat-tint, var(--cat-default));
+  color: var(--cat-ink, var(--cat-default-ink));
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ==========================================================================
+   Kiosk: the two pages anyone may use, on the screen stuck to the fridge.
+   Built for fingers and for a single viewport: no page scroll, and nothing
+   you have to press that is smaller than a fingertip.
+   ========================================================================== */
+
+/* 48px is the size a finger actually hits without aiming. Everything a person
+   presses on these two pages is at least this, which is why the kiosk sets it
+   once here rather than per component. */
+.fg-kiosk-page,
+.fg-scan-page {
+  --touch: 48px;
+}
+
+/* The wizard, as a fixed screen: a header, the step rail, the step itself
+   taking whatever is left, and the actions pinned to the bottom edge. The
+   step is the only thing that may scroll, and only when a step genuinely
+   cannot fit -- the page around it never moves, so the Next button is always
+   in the same place under your thumb. */
+.fg-kiosk-page {
+  display: grid;
+  /* Three rows, and each child is placed by name rather than by order. The
+     page also carries a visually-hidden <h1>, which is absolutely positioned
+     and so takes no row -- relying on source order put the stretch row on the
+     disclaimer and left the wizard sized to its content. */
+  grid-template-rows: [top] auto [body] minmax(0, 1fr) [foot] auto;
+  gap: var(--space-4);
+  /* dvh, not vh: a tablet browser's toolbars change the usable height, and vh
+     would put the action buttons under them. */
+  height: 100dvh;
+  max-width: 100rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+  min-height: 0;
+}
+
+.fg-kiosk-page__top {
+  grid-row: top;
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fg-kiosk-page .fg-disclaimer {
+  grid-row: foot;
+  margin: 0;
+  text-align: center;
+}
+
+/* The wizard fills the row it is given and splits it the same way the page
+   is split, so the actions land on the same line whichever step is open. */
+.fg-kiosk-page .fg-wizard {
+  grid-row: body;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  min-height: 0;
+  margin-inline: auto;
+}
+
+/* The form is the element that actually holds the steps and the buttons, so
+   it is the one that has to split the space: the open step takes what is
+   left and the actions sit on the bottom edge. Without this the form sizes
+   to its content and the Next button moves up and down the screen as steps
+   change height, which on a touch panel means aiming for it every time. */
+.fg-kiosk-page .fg-wizard > form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  min-height: 0;
+}
+
+/* The step scrolls inside itself if it must, rather than pushing the page
+   past the bottom of the screen. */
+/* Deliberately NOT centred. A fieldset's legend renders against the element's
+   top edge, and current Chrome honours align-content on block containers, so
+   centring the step pushed its fields halfway down the screen and left the
+   title stranded at the top with a gap between them. The step starts at the
+   top and the rhythm below does the spacing. */
+/* Centred now that the step is a labelled group rather than a fieldset: a
+   <legend> paints against its fieldset's top edge, so centring used to leave
+   the title stranded above a gap. "safe" falls back to top-aligned when a
+   step is taller than the space, which keeps the first field reachable.
+
+   The gutter on the right stops content sitting under the scrollbar on the
+   rare step that still overflows. */
+.fg-kiosk-page .fg-step {
+  align-content: safe center;
+  min-height: 0;
+  padding-right: var(--space-4);
+  overflow-y: auto;
+}
+
+/* Air above the title so it is not welded to the rule under the step rail.
+   This had no effect while the title was a <legend>: margin-top is ignored on
+   one. It works now that the step is a section with a real heading. */
+.fg-kiosk-page .fg-step__title {
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.fg-kiosk-page .fg-step__hint {
+  margin: 0 0 var(--space-6);
+}
+
+.fg-kiosk-page .fg-wizard__actions {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* The step rail is the progress indicator, not a heading, so it stays quiet
+   and does not take a share of the vertical space it does not need. */
+.fg-kiosk-page .fg-wizard {
+  max-width: var(--wizard-measure, 64rem);
+}
+
+/* The rail, rebuilt on a grid rather than on flex.
+   
+   Flex sized each step to its own label, so the connector between "Kind" and
+   "Name" came out a third the length of the one between "Amount" and
+   "Dates" -- the rail looked broken because the words happened to differ in
+   width. Equal grid columns make every segment identical by construction, and
+   the connector is drawn as an absolutely positioned rule from the previous
+   dot's centre to this one's, so it can never be squeezed by its neighbours.
+   
+   The label sits under its dot instead of beside it: centred under a fixed
+   column, a long word and a short word occupy the same space. */
+.fg-kiosk-page .fg-steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding-bottom: var(--space-6);
+}
+
+.fg-kiosk-page .fg-steps__step {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  min-width: 0;
+  padding-inline: var(--space-2);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* Drawn behind the dots, spanning exactly one column: from the previous
+   dot's centre to this one's. */
+.fg-kiosk-page .fg-steps__step + .fg-steps__step::before {
+  content: "";
+  position: absolute;
+  top: 1.25rem;
+  right: 50%;
+  left: -50%;
+  z-index: 0;
+  width: auto;
+  height: 2px;
+  margin: 0;
+  background: var(--border);
+}
+
+/* A segment fills once the step on its left is behind you, so the line is
+   the progress bar and the dots are just the stations on it. */
+.fg-kiosk-page .fg-steps__step.is-done + .fg-steps__step::before {
+  background: var(--primary);
+}
+
+.fg-kiosk-page .fg-steps__dot {
+  position: relative;
+  z-index: 1;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-width: 2px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+/* Three states, three weights: done is quiet and green, current is solid with
+   a soft halo so it reads first, still-to-come is a plain outline. */
+.fg-kiosk-page .fg-steps__step.is-done .fg-steps__dot {
+  border-color: var(--primary);
+  background: var(--card);
+  color: var(--primary);
+}
+
+.fg-kiosk-page .fg-steps__step[aria-current="step"] .fg-steps__dot {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 0 0 6px var(--accent);
+}
+
+.fg-kiosk-page .fg-steps__step[aria-current="step"] {
+  color: var(--foreground);
+  font-weight: 650;
+}
+
+.fg-kiosk-page .fg-steps__step.is-done {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fg-kiosk-page .fg-steps__dot {
+    transition: none;
+  }
+}
+
+/* The choices get the width a big screen actually has. At 1920 a four-column
+   grid of tap targets reads as a panel; the same grid at 640px wide reads as
+   a phone layout somebody stretched. */
+.fg-kiosk-page > .fg-alert {
+  grid-row: body;
+  align-self: start;
+}
+
+.fg-kiosk-page .fg-choices {
+  gap: var(--space-4);
+  max-width: none;
+}
+
+.fg-kiosk-page .fg-choice {
+  min-height: 5rem;
+  font-size: var(--text-lg);
+}
+
+/* Four per row. Squeezing all five onto one row left each pill too narrow for
+   a 4rem sticker beside an --text-xl word, so the label ran over its own edge.
+   A second row is cheap on a kiosk; an unreadable label is not. */
+.fg-kiosk-page .fg-choices--cat {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 48rem) {
+  .fg-kiosk-page .fg-choices--cat {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+}
+
+.fg-kiosk-page .fg-choices--cat .fg-choice {
+  min-height: 6.5rem;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.fg-kiosk-page .fg-choices--cat .fg-sticker {
+  width: 4rem;
+  height: 4rem;
+}
+
+.fg-kiosk-page .fg-choices--cat .fg-choice__label {
+  font-size: var(--text-xl);
+}
+
+.fg-kiosk-page .fg-choices--unit {
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+}
+
+.fg-kiosk-page .fg-step__hint {
+  max-width: 64ch;
+}
+
+/* ------------------------------------------------------------ tap choices */
+/* One pattern for every question on the kiosk: a grid of things you press.
+   They are buttons in a radiogroup rather than a select, because a select
+   opens a native list that is small, scrolling and awkward with a finger. */
+.fg-choices {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  margin: var(--space-4) 0;
+}
+
+.fg-choices--cat {
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
+
+/* Sticker beside the word rather than above it: it matches how a physical
+   label is read, and it makes each target wider for the same area. */
+.fg-choices--cat .fg-choice {
+  flex-direction: row;
+  gap: var(--space-4);
+  justify-content: flex-start;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+}
+
+/* The sticker keeps its size and the word takes what is left, instead of the
+   word pushing itself out of the pill when the column is narrow. */
+.fg-choices--cat .fg-sticker {
+  flex: none;
+}
+
+.fg-choices--cat .fg-choice__label {
+  font-size: var(--text-lg);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.fg-choices--unit {
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+}
+
+.fg-choice {
+  display: flex;
+  gap: var(--space-2);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch);
+  padding: var(--space-4) var(--space-3);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: var(--text-base);
+  font-weight: 550;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 80ms ease;
+}
+
+.fg-choice--wide {
+  flex-direction: row;
+  min-height: 3.75rem;
+}
+
+.fg-choice:hover {
+  border-color: var(--input);
+}
+
+/* Pressed state, so a tap is acknowledged on a screen that has no cursor to
+   show it. */
+.fg-choice:active {
+  transform: scale(0.97);
+}
+
+/* The chosen one is the ink pill again: the same "this is the live one"
+   signal the sidebar and the filters use, so it needs no new explanation. */
+.fg-choice[aria-checked="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.fg-choice[aria-checked="true"] .fg-sticker {
+  /* The tint behind a sticker disappears against ink, so it gets the card
+     colour back and stays legible. */
+  background: var(--card);
+}
+
+.fg-choice__label {
+  text-transform: capitalize;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fg-choice:active {
+    transform: none;
+  }
+}
+
+/* -------------------------------------------------------------- the pad */
+.fg-keypad {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 60rem;
+  margin-top: var(--space-4);
+}
+
+.fg-key {
+  min-height: 3.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 80ms ease;
+}
+
+.fg-key:hover {
+  background: var(--secondary);
+}
+
+.fg-key:active {
+  transform: scale(0.95);
+}
+
+.fg-key--wide {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fg-key:active {
+    transform: none;
+  }
+}
+
+/* The identifier, shown big because it is what someone reads off a sticker
+   and checks against the container in their hand. */
+.fg-kiosk-id {
+  margin: var(--space-2) 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------------------- quantity */
+/* A number field on a touch screen means a keyboard over the page. Two big
+   buttons mean neither, and the field stays for the rare exact amount. */
+.fg-stepper {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-5) 0;
+}
+
+.fg-stepper__btn {
+  width: 4rem;
+  height: 4rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--text-2xl);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 80ms ease;
+}
+
+.fg-stepper__btn:hover {
+  background: var(--primary-hover);
+}
+
+.fg-stepper__btn:active {
+  transform: scale(0.94);
+}
+
+.fg-stepper__value {
+  width: 8rem;
+  padding: var(--space-2);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fg-stepper__btn:active {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- dates */
+.fg-dategroup {
+  margin-bottom: var(--space-5);
+}
+
+/* The escape hatch on every step: a tap path that covers most cases, and one
+   key that reveals typing for the rest. */
+.fg-typeit {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.fg-input--lg {
+  min-height: var(--touch);
+  font-size: var(--text-lg);
+}
+
+.fg-field--label {
+  display: grid;
+  /* start, not stretch: without it every control here inherits the block's
+     full width, which is how "Use a different label" became a full-bleed bar
+     pressed against the scrollbar. */
+  justify-items: start;
+  align-content: start;
+  gap: var(--space-2);
+}
+
+.fg-field--label .fg-field__hint {
+  margin: 0 0 var(--space-2);
+}
+
+/* A one-line answer to "what is this button for", so the second path is not
+   just a button with no context beside a camera that explains itself.
+
+   It spans whatever columns exist rather than naming column 3: pinning it to
+   a fixed column created two implicit columns in the single-column layout and
+   squeezed the identifier field down to one word per line. */
+.fg-scan-alt__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* The screen's own controls, kept together in one corner on both kiosk
+   pages so they read as belonging to the panel rather than to the task. */
+.fg-kiosk-page__end {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* ===================================================== the scanned record */
+/* These follow the base .fg-dialog rules above deliberately: a modifier at
+   the same specificity only wins when it comes later, and an earlier version
+   of the wide modifier sat above the base rule and silently did nothing. */
+
+/* The [open] qualifier is load-bearing, not decoration. A dialog is hidden by
+   the user-agent rule `dialog:not([open]) { display: none }`, and ANY author
+   rule that sets display beats it -- so an unqualified `display: flex` here
+   left the panel on screen after close() had already set open to false, and
+   the close button looked broken. Same shape as the [hidden] bug guarded
+   against near the top of this file. */
+.fg-dialog--wide[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(62rem, 94vw);
+  max-height: 88dvh;
+}
+
+.fg-dialog--wide .fg-dialog__body {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Two columns: the verdict, in its own colour, on the left; everything the
+   person does about it on the right. The colour block is the thing the eye
+   lands on, so it gets its own side rather than being a banner the facts
+   have to be read past. */
+.fg-dialog__split {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0;
+  height: 100%;
+}
+
+@media (min-width: 46rem) {
+  .fg-dialog__split {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+
+/* The right-hand side: the facts, then the actions pinned to the bottom so
+   they sit on one line however many facts there are. */
+.fg-dialog__side {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.fg-dialog__facts {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  padding: var(--space-5);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The dialog takes focus so its buttons do not, and it is not a control, so
+   it shows no ring of its own -- otherwise opening a record drew an outline
+   around the whole panel. */
+.fg-dialog:focus,
+.fg-dialog:focus-visible {
+  outline: none;
+}
+
+/* The record as a panel: the verdict across the top, then what to do about it
+   beside the facts. Stacking all of it in one narrow column is what made a
+   six-line record scroll and read as congested. */
+.fg-dialog__advice-list {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+/* ================================================ the scanner, aligned */
+/* Both columns are single stacks with one shared rhythm, so their left and
+   right edges and their internal gaps line up rather than each column
+   inventing its own spacing. One token sets that rhythm for both. */
+.fg-scan-page__body {
+  --scan-rhythm: var(--space-5);
+}
+
+.fg-scanner-stage,
+.fg-scan-panel {
+  display: grid;
+  gap: var(--scan-rhythm);
+  align-content: center;
+  justify-items: stretch;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.fg-scan-panel {
+  text-align: left;
+}
+
+.fg-scan-panel h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+}
+
+.fg-scan-panel .fg-scan-page__sub {
+  margin: calc(var(--scan-rhythm) * -0.6) 0 0;
+  max-width: none;
+}
+
+.fg-scan-panel .fg-scan-manual {
+  margin: 0;
+  text-align: left;
+}
+
+.fg-scan-panel .fg-scan-manual__row {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.fg-scan-panel .fg-scan-manual__row .fg-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch);
+}
+
+.fg-scan-panel .fg-scan-alt__divider {
+  flex-direction: row;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.fg-scan-panel .fg-scan-alt__divider::before,
+.fg-scan-panel .fg-scan-alt__divider::after {
+  width: auto;
+  height: 1px;
+}
+
+.fg-scan-panel .fg-scan-alt__add {
+  width: 100%;
+  margin: 0;
+  justify-content: center;
+}
+
+/* The camera and the panel sit side by side from the width where both still
+   have room to breathe; below that the same two stacks simply follow on. */
+@media (min-width: 64rem) {
+  .fg-scan-page__body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* stretch, not center: both columns then span the same band and each
+       centres its own content inside it, so their optical centres line up
+       instead of two differently sized boxes floating independently. */
+    align-items: stretch;
+    column-gap: var(--space-8);
+    text-align: left;
+  }
+
+  .fg-scanner-stage {
+    justify-items: center;
+  }
+}
+
+/* ------------------------------------------------- keyboard on the kiosk */
+/* The tap targets had hover and selected states but no focus ring of their
+   own, so someone tabbing through the wizard could not see where they were.
+   The kiosk is touch-first, not touch-only: it still has to be operable from
+   a keyboard, and the test matrix checks that. */
+.fg-choice:focus-visible,
+.fg-key:focus-visible,
+.fg-stepper__btn:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+/* A pressed choice already inverts to ink, so its ring needs to sit outside
+   the fill rather than on it. */
+.fg-choice[aria-checked="true"]:focus-visible {
+  outline-offset: 4px;
+}
+
+
+
+/* ------------------------------------------------- two questions in a row */
+/* Independent answers side by side instead of stacked. It halves the height
+   of the tallest step, which is what lets the keypad open without the screen
+   having to scroll. */
+.fg-step__row {
+  display: grid;
+  gap: var(--space-6) var(--space-8);
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 52rem) {
+  .fg-step__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.fg-step__col {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  min-width: 0;
+}
+
+/* Zones are a short list, so they stack in their column rather than trying to
+   be a grid two items wide. */
+.fg-choices--stack {
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+}
+
+/* Sized to sit comfortably in its column rather than to its own text: a
+   control this incidental-looking gets missed. */
+.fg-step__col .fg-btn {
+  width: 100%;
+  max-width: 22rem;
+  justify-content: center;
+}
+
+.fg-step__col .fg-keypad {
+  width: 100%;
+  max-width: 22rem;
+  margin-top: var(--space-2);
+}
+
+/* ------------------------------------------------------------- the camera */
+/* A photograph of the zone, refreshed on a timer. It sits in a fixed-ratio
+   box so the card does not jump about each time a frame of a slightly
+   different size arrives. */
+.fg-camera__frame {
+  margin: 0;
+}
+
+.fg-camera__img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.fg-camera__caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.fg-camera__time {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================== snapshots */
+/* Photographs a person asked the fridge for. A grid of thumbnails that opens
+   one at a time in the photo dialog; each keeps its own download and delete
+   controls so neither needs the dialog. */
+
+.fg-capture-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.fg-capture-status[hidden] {
+  display: none;
+}
+
+.fg-capture-status__spinner {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: fg-capture-spin 0.8s linear infinite;
+}
+
+@keyframes fg-capture-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fg-capture-status__spinner {
+    animation: none;
+  }
+}
+
+.fg-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--space-4);
+}
+
+.fg-gallery:empty {
+  display: none;
+}
+
+.fg-gallery__item {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.fg-gallery__open {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: none;
+  cursor: zoom-in;
+}
+
+.fg-gallery__img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.fg-gallery__caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.fg-gallery__time {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-gallery__actions {
+  display: inline-flex;
+}
+
+/* Wide enough for a 640x480 photograph at full size on a laptop, and the full
+   width of the screen on a phone. Same [open] rule as .fg-dialog--wide. */
+.fg-dialog--photo[open] {
+  width: min(44rem, calc(100vw - 2 * var(--space-4)));
+  max-height: 92dvh;
+  overflow: auto;
+}
+
+.fg-photo__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+.fg-camera__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* ================================================================== rfid */
+/* Tags tapped in at the fridge that still need their details. One row per
+   tag above every page's content, each with its own way to add the details. */
+.fg-rfid-banner {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.fg-rfid-banner[hidden] {
+  display: none;
+}
+
+.fg-rfid-banner .fg-alert {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fg-rfid-banner .fg-alert__body {
+  flex: 1 1 16rem;
+  margin: 0;
+}
+
+/* The tag on the add-item form: shown, never edited. */
+.fg-kiosk-tag {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* Items a newly tapped RFID tag could belong to, on the scan page. */
+.fg-rfid-link {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.fg-rfid-link[hidden] {
+  display: none;
+}
+
+.fg-rfid-choices {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+/* Doubled class: .fg-btn and .fg-btn--block centre their content, and a
+   choice reads as a list entry, left-aligned. */
+.fg-btn.fg-rfid-choice {
+  display: grid;
+  gap: var(--space-1);
+  justify-content: stretch;
+  justify-items: start;
+  height: auto;
+  padding-block: var(--space-3);
+  text-align: left;
+}
+
+.fg-rfid-choice span {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+}

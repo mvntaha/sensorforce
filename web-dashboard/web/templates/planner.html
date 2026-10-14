@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "components.html" import badge, icon, page_head, note, food_mark with context %}
+
+{% block title %}Consumption planner · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('Make the most of what is fresh.',
+                      'Your plan, ordered by whatever runs out first.') %}
+      <a class="fg-btn" href="{{ url_for('main.inventory') }}">{{ icon('box') }}Inventory</a>
+      <a class="fg-btn fg-btn--primary" href="{{ url_for('main.scan') }}">
+        {{ icon('qr') }}Add an item
+      </a>
+    {% endcall %}
+
+    {% call note('calendar') %}
+      Inspect anything marked <strong>Check Food</strong> before you use it. Recording that
+      something was eaten or thrown away is your decision; FreshGuard keeps the record and never
+      makes that judgement for you.
+    {% endcall %}
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Use-first plan</h2>
+        <p class="fg-card__hint">
+          {{ plan | length }} item{{ '' if plan | length == 1 else 's' }} in store
+        </p>
+      </header>
+
+      <ul class="fg-plan" id="fg-plan">
+        {% for entry in plan %}
+          {% set item = entry.status.item %}
+          {% set assessment = entry.status.assessment %}
+          <li class="fg-plan__item fg-cat-{{ item.category }}" data-qr="{{ item.qr_id }}">
+            {{ food_mark(item.category) }}
+
+            <div class="fg-plan__body">
+              <h3 class="fg-plan__name">
+                <a href="{{ url_for('main.item_page', qr_id=item.qr_id) }}">{{ item.name }}</a>
+              </h3>
+              <p class="fg-plan__meta">
+                {{ item.quantity }} {{ item.unit }} · {{ item.category }} ·
+                stored {{ entry.status.days_stored }} day{{ '' if entry.status.days_stored == 1 else 's' }} ·
+                {% if entry.days is none %}
+                  No limit configured
+                {% elif entry.days < 0 %}
+                  Past its limit by {{ -entry.days }} day{{ '' if entry.days == -1 else 's' }}
+                {% elif entry.days == 0 %}
+                  Reaches its limit today
+                {% else %}
+                  Use within {{ entry.days }} day{{ '' if entry.days == 1 else 's' }}
+                {% endif %}
+              </p>
+              {{ badge(
+                'fresh' if assessment.status|string == 'Fresh/Normal' else
+                'soon' if assessment.status|string == 'Use Soon' else
+                'check' if assessment.status|string == 'Check Food' else 'fault') }}
+              {% if assessment.recommendation %}
+                <p class="fg-plan__hint">{{ assessment.recommendation }}</p>
+              {% endif %}
+            </div>
+
+            <div class="fg-plan__actions">
+              <button class="fg-btn" type="button"
+                      data-state="consumed" data-qr="{{ item.qr_id }}">
+                {{ icon('check') }}Mark consumed
+              </button>
+              <button class="fg-btn fg-btn--ghost" type="button"
+                      data-state="discarded" data-qr="{{ item.qr_id }}">
+                {{ icon('trash') }}Record disposal
+              </button>
+            </div>
+          </li>
+        {% else %}
+          <li class="fg-empty">Nothing is in store. Add an item to start planning.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/planner.js') }}"></script>
+{% endblock %}

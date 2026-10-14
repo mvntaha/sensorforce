@@ -1,0 +1,34 @@
+[Unit]
+Description=FreshGuard sensor monitor and cloud sync
+Documentation=file:/opt/freshguard/README.md
+After=network.target
+# The monitor works with no network; this only orders startup.
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=freshguard
+Group=freshguard
+WorkingDirectory=/opt/freshguard
+EnvironmentFile=/opt/freshguard/.env
+ExecStart=/opt/freshguard/.venv/bin/python /opt/freshguard/monitor.py
+
+# A monitor that stays dead takes the buzzer with it, so always come back.
+Restart=always
+RestartSec=5
+
+# Journald captures stdout and stderr; the application logs there.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=freshguard-monitor
+
+# The service needs GPIO and I2C, and nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/freshguard
+SupplementaryGroups=gpio i2c
+
+[Install]
+WantedBy=multi-user.target

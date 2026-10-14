@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ theme_class | default('') }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}FreshGuard{% endblock %}</title>
+    <meta name="description" content="FreshGuard monitors food storage conditions and freshness indicators.">
+    {# Everything is served from the Pi. Nothing is fetched from the internet. #}
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/freshguard.css') }}">
+    {# Applied before first paint so a dark-mode user never sees a light flash. #}
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    {% block head %}{% endblock %}
+  </head>
+  {# The kiosk is an appliance, not a document: it fills the screen exactly
+     and never scrolls. The class goes on the body so the lock can apply to
+     the scroll container itself rather than to something inside it. #}
+  <body{% if full_bleed %} class="fg-body--kiosk"{% endif %}>
+    {% from "components.html" import icon with context %}
+    <a class="fg-skip-link" href="#main">Skip to main content</a>
+
+    {% if current_user and not full_bleed %}
+      {% block sidebar %}
+        <aside class="fg-sidebar" id="fg-sidebar" data-open="false">
+          <a class="fg-brand" href="{{ url_for('main.dashboard') }}">
+            <span class="fg-brand__mark">
+              <img src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+            </span>
+            Fresh Guard
+          </a>
+
+          <p class="fg-nav-label">Workspace</p>
+          <nav aria-label="Main">
+            <ul class="fg-sidebar__nav">
+              {% for endpoint, label, icon_name in nav_items | default([]) %}
+                <li>
+                  <a class="fg-sidebar__link" href="{{ url_for(endpoint) }}"
+                     {% if endpoint == active_page %}aria-current="page"{% endif %}>
+                    {{ icon(icon_name) }}{{ label }}
+                    {% if endpoint == 'main.alerts' and open_alert_count %}
+                      <span class="fg-sidebar__count">{{ open_alert_count }}</span>
+                    {% endif %}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          </nav>
+
+          <div class="fg-sidebar__bottom">
+            <div class="fg-eco">
+              <span class="fg-eco__mark">{{ icon('leaf') }}</span>
+              <strong>A little care. Less waste.</strong>
+              <p>Use what is closest to its date first.</p>
+            </div>
+
+            <div class="fg-profile">
+              <span class="fg-avatar" aria-hidden="true">
+                {{ current_user.username[:2] | upper }}
+              </span>
+              <span class="fg-profile__text">
+                <strong>{{ current_user.username }}</strong>
+                <small>{{ 'Administrator' if current_user.is_admin else 'Staff' }}</small>
+              </span>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+                <button class="fg-icon-btn fg-icon-btn--sm" type="submit">
+                  {{ icon('logout', label='Sign out') }}
+                </button>
+              </form>
+            </div>
+          </div>
+        </aside>
+      {% endblock %}
+    {% endif %}
+
+    <div class="{% if full_bleed %}fg-kiosk{% elif current_user %}fg-app{% else %}fg-shell{% endif %}">
+      {% if current_user and not full_bleed %}
+        <header class="fg-header">
+          <div class="fg-crumb">
+            <button class="fg-icon-btn fg-menu-btn" type="button" id="fg-menu"
+                    aria-controls="fg-sidebar" aria-expanded="false">
+              {{ icon('list', label='Toggle navigation') }}
+            </button>
+            Workspace <span aria-hidden="true">/</span>
+            <strong>{{ page_title | default('Overview') }}</strong>
+          </div>
+
+          <div class="fg-header__end">
+            <span class="fg-pill" id="fg-monitor-pill">
+              <span class="fg-dot"></span>{{ mode_label | default('Simulator') }}
+            </span>
+            <a class="fg-icon-btn" href="{{ url_for('main.alerts') }}" id="fg-bell"
+               data-alerts="{{ open_alert_count | default(0) }}"
+               aria-label="Alerts{% if bell_count %}, {{ bell_count }} needing attention{% endif %}">
+              {{ icon('bell') }}
+              <span class="fg-icon-btn__count" id="fg-bell-count"
+                    {% if not bell_count %}hidden{% endif %}>{{ bell_count | default(0) }}</span>
+            </a>
+            <button class="fg-icon-btn" type="button" id="fg-theme-toggle" aria-pressed="false">
+              <span class="fg-theme-icon fg-theme-icon--light">{{ icon('sun', label='Switch to dark mode') }}</span>
+              <span class="fg-theme-icon fg-theme-icon--dark">{{ icon('moon', label='Switch to light mode') }}</span>
+            </button>
+          </div>
+        </header>
+      {% endif %}
+
+      <main class="{% block main_class %}fg-main{% endblock %}" id="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="fg-stack" role="status" aria-live="polite">
+              {% for category, message in messages %}
+                <div class="fg-alert fg-alert--{{ category }}">
+                  <span class="fg-alert__mark">
+                    {{ icon('alert' if category in ('warning', 'critical') else 'ok') }}
+                  </span>
+                  <p class="fg-alert__body fg-alert__text">{{ message }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {# RFID tags tapped in with no details yet. Rendered here so it shows on
+           every signed-in page, and refreshed by rfid.js while the page is open. #}
+        {% if current_user and not full_bleed %}
+          <div class="fg-rfid-banner" id="fg-rfid-banner" role="status" aria-live="polite"
+               {% if not rfid_pending %}hidden{% endif %}>
+            {% for tag in rfid_pending | default([]) %}
+              <div class="fg-alert fg-alert--info">
+                <span class="fg-alert__mark">{{ icon('plus') }}</span>
+                <p class="fg-alert__body fg-alert__text">
+                  <strong>New item tapped in</strong> &middot; tag &hellip;{{ tag.short }}.
+                  Add what it is so FreshGuard can track it.
+                </p>
+                <a class="fg-btn fg-btn--primary" href="{{ tag.add_url }}">Add item details</a>
+              </div>
+            {% endfor %}
+          </div>
+          <template id="fg-rfid-item">
+            <div class="fg-alert fg-alert--info">
+              <span class="fg-alert__mark">{{ icon('plus') }}</span>
+              <p class="fg-alert__body fg-alert__text">
+                <strong>New item tapped in</strong> &middot; tag &hellip;<span data-short></span>.
+                Add what it is so FreshGuard can track it.
+              </p>
+              <a class="fg-btn fg-btn--primary" data-add>Add item details</a>
+            </div>
+          </template>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="fg-footer">
+        <div class="fg-footer__inner">
+          {# Required on every page by the SRS. #}
+          <p class="fg-disclaimer">FreshGuard does not certify food safety.</p>
+          <p class="fg-disclaimer">Inspect food before use.</p>
+        </div>
+      </footer>
+    </div>
+
+    <div class="fg-toast-region" id="fg-toast-region" role="status" aria-live="polite"></div>
+
+    <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% if current_user and not full_bleed %}
+      <script type="module" src="{{ url_for('static', filename='js/rfid.js') }}"></script>
+    {% endif %}
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

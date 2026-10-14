@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% from "components.html" import badge, icon, figure_tile, sensor_tile, alert_row,
+                                 food_cell, page_head, note with context %}
+
+{% block title %}Overview · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('A fresher kitchen starts here.',
+                      'Keep an eye on your food. A little care makes a big difference.') %}
+      <a class="fg-btn" href="{{ url_for('reports.inventory_csv') }}">
+        {{ icon('download') }}Export report
+      </a>
+      <a class="fg-btn fg-btn--primary" href="{{ url_for('main.scan') }}">
+        {{ icon('qr') }}Scan or add an item
+      </a>
+    {% endcall %}
+
+    <section class="fg-hero">
+      <div>
+        <p class="fg-hero__eyebrow">Less waste. More good.</p>
+        <h2>
+          {{ greeting }}, {{ current_user.username }}
+          <span class="fg-hero__tag">{{ icon('leaf') }}{{ mode_label }}</span>
+        </h2>
+        <p>
+          {{ item_count }} item{{ '' if item_count == 1 else 's' }} being watched across
+          {{ zone_count }} zone{{ '' if zone_count == 1 else 's' }}.
+          {% if use_first %}Start with {{ use_first[0].item.name }}.{% else %}Nothing needs attention right now.{% endif %}
+        </p>
+      </div>
+      {# Our own artwork, not the reference's. #}
+      <svg class="fg-hero__art" viewBox="0 0 220 150" fill="none" aria-hidden="true">
+        <circle cx="140" cy="86" r="62" fill="var(--hero-accent)" opacity="0.18"/>
+        <ellipse cx="132" cy="132" rx="72" ry="7" fill="var(--hero-accent)" opacity="0.2"/>
+        <rect x="86" y="46" width="88" height="80" rx="8" fill="var(--sidebar)" opacity="0.75"
+              stroke="var(--hero-accent)" stroke-width="2"/>
+        <path d="M96 70h68M96 88h58M96 106h48" stroke="var(--hero-accent)" stroke-width="2"
+              stroke-linecap="round" opacity="0.65"/>
+        <path d="M130 46V28c0-9 7-16 16-16" stroke="var(--hero-accent)" stroke-width="2"
+              stroke-linecap="round"/>
+        <circle cx="150" cy="24" r="9" fill="var(--hero-accent)" opacity="0.55"/>
+      </svg>
+    </section>
+
+    {# Shown by the dashboard script when a required sensor stops reporting. #}
+    <div class="fg-banner" id="fg-fault-banner" hidden>
+      {{ icon('alert') }}
+      <span id="fg-fault-text">Sensor Fault/Data Unavailable</span>
+    </div>
+
+    <div class="fg-grid fg-grid--2 fg-grid--4">
+      {{ figure_tile('Items stored', '%02d' % item_count, 'box',
+                     'Across %d storage zone%s' % (zone_count, '' if zone_count == 1 else 's')) }}
+      {{ figure_tile('Fresh/Normal', '%02d' % counts.fresh, 'leaf',
+                     'Within the monitored limits') }}
+      {{ figure_tile('Use Soon', '%02d' % counts.soon, 'clock',
+                     'Plan a meal. Make it count.', tone='amber') }}
+      {{ figure_tile('Check Food', '%02d' % counts.check, 'alert',
+                     'Inspect before use', tone='red') }}
+    </div>
+
+    {% for zone in zones %}
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">{{ zone.name }}</h2>
+          <p class="fg-card__hint">
+            {% if zone.has_required_fault %}
+              Sensor Fault/Data Unavailable
+            {% elif zone.reading_count == 0 %}
+              No readings recorded yet
+            {% else %}
+              Live readings · refreshed every 5 seconds
+            {% endif %}
+          </p>
+        </header>
+
+        <div class="fg-grid fg-grid--2 fg-grid--3">
+          {% set t = zone_tiles[zone.zone_id] %}
+          {{ sensor_tile('Temperature', 'gauge', t.temp.value, '°C', t.temp.range,
+                         t.temp.state, t.temp.fill) }}
+          {{ sensor_tile('Humidity', 'droplet', t.hum.value, '%', t.hum.range,
+                         t.hum.state, t.hum.fill) }}
+          {# Relative reading, never ppm: the sensor is not calibrated. #}
+          {{ sensor_tile('Gas (relative)', 'wind', t.gas.value, '', t.gas.range,
+                         t.gas.state, t.gas.fill) }}
+        </div>
+
+        <p class="fg-door-row">
+          {{ icon('door') }}
+          Door {{ 'open' if zone.latest and zone.latest.door_open else 'closed' }}
+          <span class="fg-door-row__end">
+            {% if zone.has_required_fault %}
+              Sensor Fault/Data Unavailable
+            {% else %}
+              Door-open limit {{ door_open_timeout_s }} s
+            {% endif %}
+          </span>
+        </p>
+      </section>
+    {% else %}
+      <section class="fg-card">
+        <p class="fg-empty">No zones are configured yet.</p>
+      </section>
+    {% endfor %}
+
+    {# The camera frame. Present only when the device has actually sent one:
+       the image element hides itself on error, so a fridge with no camera
+       shows the empty line rather than a broken picture. #}
+    <section class="fg-card fg-camera" data-camera="{{ device_id }}">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Inside the fridge</h2>
+        <p class="fg-card__hint">
+          The latest photograph from the storage zone. It is a picture, not a
+          measurement: nothing in it is used to judge freshness.
+        </p>
+      </header>
+
+      <figure class="fg-camera__frame">
+        <img class="fg-camera__img" id="fg-camera-img"
+             src="{{ url_for('main.camera_frame', device_id=device_id) }}"
+             alt="Latest photograph inside the storage zone" hidden>
+        <figcaption class="fg-camera__caption">
+          <span class="fg-empty" id="fg-camera-empty">No photograph has arrived yet.</span>
+          <span class="fg-camera__time" id="fg-camera-time" hidden></span>
+        </figcaption>
+      </figure>
+
+      <div class="fg-camera__actions">
+        <button class="fg-btn fg-btn--primary" type="button" id="fg-dashboard-capture">
+          {{ icon('camera') }}Take snapshot
+        </button>
+        <a class="fg-btn" href="{{ url_for('snapshots.snapshots') }}">All snapshots</a>
+      </div>
+    </section>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Recent conditions</h2>
+        <p class="fg-card__hint">Temperature, humidity and gas over the last readings.</p>
+        <div class="fg-card__controls">
+          <label class="fg-visually-hidden" for="fg-chart-zone">Storage zone</label>
+          <select class="fg-select" id="fg-chart-zone">
+            <option value="">Every zone</option>
+            {% for zone in zones %}
+              <option value="{{ zone.zone_id }}">{{ zone.name }}</option>
+            {% endfor %}
+          </select>
+
+          <label class="fg-visually-hidden" for="fg-chart-metric">Chart metric</label>
+          <select class="fg-select" id="fg-chart-metric">
+            <option value="both">Temperature &amp; humidity</option>
+            <option value="temp">Temperature</option>
+            <option value="humidity">Humidity</option>
+            <option value="gas">Gas (relative)</option>
+          </select>
+        </div>
+      </header>
+      <div class="fg-chart">
+        <canvas id="fg-readings-chart" aria-label="Temperature and humidity over time"
+                role="img"></canvas>
+      </div>
+      <p class="fg-card__hint" id="fg-chart-empty" hidden>No readings to chart yet.</p>
+    </section>
+
+    <div class="fg-grid fg-grid--2">
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Use these first</h2>
+          <a class="fg-btn fg-btn--ghost" href="{{ url_for('main.planner') }}">Plan meals</a>
+        </header>
+        <ul class="fg-list">
+          {% for status in use_first %}
+            <li class="fg-list__item">
+              <span class="fg-list__title">
+                <a href="{{ url_for('main.item_page', qr_id=status.item.qr_id) }}">
+                  {{ status.item.name }}</a>
+              </span>
+              {{ badge(
+                'fresh' if status.assessment.status|string == 'Fresh/Normal' else
+                'soon' if status.assessment.status|string == 'Use Soon' else
+                'check' if status.assessment.status|string == 'Check Food' else 'fault') }}
+              {% if status.assessment.recommendation %}
+                <p class="fg-list__hint">{{ status.assessment.recommendation }}</p>
+              {% endif %}
+            </li>
+          {% else %}
+            <li class="fg-empty">Nothing stored yet.</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Active alerts</h2>
+          <a class="fg-btn fg-btn--ghost" href="{{ url_for('main.alerts') }}">All alerts</a>
+        </header>
+        <div class="fg-stack">
+          {% for alert in alerts %}
+            {{ alert_row(
+              'critical' if alert.severity == 'critical' else
+              'warning' if alert.severity == 'warning' else 'info',
+              alert.zone_name ~ ' — ' ~ alert.type.replace('_', ' '),
+              alert.message,
+              alert.ts) }}
+          {% else %}
+            <p class="fg-empty">No unacknowledged alerts.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Food inventory</h2>
+        <a class="fg-btn fg-btn--ghost" href="{{ url_for('main.inventory') }}">Open inventory</a>
+      </header>
+      <div class="fg-table-wrap">
+        <table class="fg-table">
+          <caption class="fg-visually-hidden">The items nearest their limit</caption>
+          {# The same columns as the inventory page, so the two tables read as
+             one component. The Item cell carries no amount or category of its
+             own here either: both have columns of their own, and printing a
+             fact twice in one row is what made the cell look crowded. #}
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">QR</th>
+              <th scope="col">Category</th>
+              <th scope="col">Zone</th>
+              <th class="fg-table__num" scope="col">Quantity</th>
+              <th class="fg-table__num" scope="col">Stored for</th>
+              <th class="fg-table__time" scope="col">Use by</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for status in use_first %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('main.item_page', qr_id=status.item.qr_id) }}">
+                    {{ food_cell(status.item.name, status.item.category,
+                                 status.item.quantity, status.item.unit, meta=False) }}
+                  </a>
+                </td>
+                <td><code>{{ status.item.qr_id }}</code></td>
+                <td>{{ status.item.category }}</td>
+                <td>{{ zone_names.get(status.item.zone_id, '—') }}</td>
+                <td class="fg-table__num">{{ status.item.quantity }} {{ status.item.unit }}</td>
+                {# SRS 1.6 xvii lists storage duration separately from expiry. #}
+                <td class="fg-table__num">
+                  {{ status.days_stored }} day{{ '' if status.days_stored == 1 else 's' }}
+                </td>
+                <td class="fg-table__time">{{ status.item.expiry_date or '—' }}</td>
+                <td>{{ badge(
+                  'fresh' if status.assessment.status|string == 'Fresh/Normal' else
+                  'soon' if status.assessment.status|string == 'Use Soon' else
+                  'check' if status.assessment.status|string == 'Check Food' else 'fault') }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="8" class="fg-empty">Nothing stored yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Consumption history</h2>
+        <p class="fg-card__hint">
+          {{ outcomes.consumed }} eaten &middot; {{ outcomes.discarded }} thrown away
+        </p>
+        <a class="fg-btn fg-btn--ghost" href="{{ url_for('reports.reports') }}">Reports</a>
+      </header>
+
+      {# The item rows are gone, so every value here comes from the history's
+         own copy of what was removed. #}
+      <div class="fg-table-wrap">
+        <table class="fg-table">
+          <caption class="fg-visually-hidden">What has been consumed or thrown away</caption>
+          <thead>
+            <tr>
+              <th class="fg-table__time" scope="col">When (UTC)</th>
+              <th scope="col">Item</th>
+              <th scope="col">Container</th>
+              <th class="fg-table__num" scope="col">Stored for</th>
+              <th scope="col">Status then</th>
+              <th scope="col">Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in history %}
+              <tr>
+                <td class="fg-table__time">{{ entry.consumed_at }}</td>
+                <td>{{ entry.item_name }}</td>
+                <td><code>{{ entry.qr_id }}</code></td>
+                <td class="fg-table__num">
+                  {% if entry.days_stored is not none %}
+                    {{ entry.days_stored }} day{{ '' if entry.days_stored == 1 else 's' }}
+                  {% else %}—{% endif %}
+                </td>
+                <td>{{ entry.status_at_consumption }}</td>
+                <td>
+                  <span class="fg-outcome fg-outcome--{{ entry.outcome }}">{{ entry.outcome }}</span>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6" class="fg-empty">
+                  Nothing recorded yet. Scan a container and mark it consumed to start the history.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {% call note('leaf') %}
+      FreshGuard watches storage conditions and the clock. It does not test food, and a status here
+      is never a verdict on whether something may be eaten — inspect anything marked
+      <strong>Check Food</strong> yourself. Gas is a relative reading from an uncalibrated MQ-135,
+      measured for the whole zone, and is never attributed to one item.
+    {% endcall %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

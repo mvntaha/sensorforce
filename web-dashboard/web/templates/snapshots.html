@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "components.html" import icon, page_head, note with context %}
+
+{% block title %}Snapshots · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack" id="fg-snapshots"
+       data-device="{{ device_id }}"
+       data-timeout="{{ timeout_s }}"
+       {% if open_request %}data-open-request="{{ open_request.id }}"{% endif %}>
+    {% call page_head('Snapshots', 'See inside your fridge from wherever you are.') %}
+      <button class="fg-btn fg-btn--primary" type="button" id="fg-capture"
+              {% if open_request %}disabled{% endif %}>
+        {{ icon('camera') }}Take snapshot
+      </button>
+    {% endcall %}
+
+    {% call note('camera') %}
+      The Pi takes a photograph only when you ask for one here, and it usually arrives within
+      a few seconds. Every photograph you take is kept below until you delete it. A photograph
+      is a picture, not a measurement: nothing in it is used to judge freshness.
+    {% endcall %}
+
+    <p class="fg-capture-status" id="fg-capture-status" role="status" aria-live="polite"
+       {% if not open_request %}hidden{% endif %}>
+      <span class="fg-capture-status__spinner" aria-hidden="true"></span>
+      <span id="fg-capture-text">Asking the fridge for a photo…</span>
+    </p>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Your snapshots</h2>
+        <p class="fg-card__hint" id="fg-snapshot-count">
+          {{ snapshots | length }} photo{{ '' if snapshots | length == 1 else 's' }}, newest first.
+        </p>
+      </header>
+
+      <div class="fg-gallery" id="fg-gallery">
+        {% for snap in snapshots %}
+          <figure class="fg-gallery__item" data-snapshot="{{ snap.id }}"
+                  data-url="{{ snap.url }}" data-download="{{ snap.download_url }}"
+                  data-taken="{{ snap.taken_at }}">
+            <button class="fg-gallery__open" type="button" data-view>
+              <img class="fg-gallery__img" src="{{ snap.url }}" loading="lazy"
+                   alt="The inside of the fridge, {{ snap.taken_label }}">
+            </button>
+            <figcaption class="fg-gallery__caption">
+              <time class="fg-gallery__time" datetime="{{ snap.taken_at }}">{{ snap.taken_label }}</time>
+              <span class="fg-gallery__actions">
+                <a class="fg-icon-btn" href="{{ snap.download_url }}" download="{{ snap.download_name }}">
+                  {{ icon('download', label='Download') }}
+                </a>
+                <button class="fg-icon-btn" type="button" data-delete>
+                  {{ icon('trash', label='Delete') }}
+                </button>
+              </span>
+            </figcaption>
+          </figure>
+        {% endfor %}
+      </div>
+
+      <p class="fg-empty" id="fg-gallery-empty" {% if snapshots %}hidden{% endif %}>
+        No snapshots yet. Tap <strong>Take snapshot</strong> to see inside your fridge.
+      </p>
+    </section>
+  </div>
+
+  {# Full-size view of one photograph. Filled in by snapshots.js. #}
+  <dialog class="fg-dialog fg-dialog--photo" id="fg-photo-dialog" tabindex="-1"
+          aria-labelledby="fg-photo-title">
+    <div class="fg-dialog__head">
+      <h2 class="fg-dialog__title" id="fg-photo-title">Snapshot</h2>
+      <button class="fg-icon-btn" type="button" data-close-dialog>
+        {{ icon('close', label='Close') }}
+      </button>
+    </div>
+    <div class="fg-dialog__body">
+      <img class="fg-photo__img" id="fg-photo-img" alt="The inside of the fridge">
+    </div>
+    <div class="fg-dialog__foot">
+      <a class="fg-btn fg-btn--primary" id="fg-photo-download" href="#" download>
+        {{ icon('download') }}Download
+      </a>
+      <button class="fg-btn fg-btn--destructive" type="button" id="fg-photo-delete">
+        {{ icon('trash') }}Delete
+      </button>
+    </div>
+  </dialog>
+
+  {# Copied for each new photograph, so a capture appears without a reload. #}
+  <template id="fg-gallery-item">
+    <figure class="fg-gallery__item">
+      <button class="fg-gallery__open" type="button" data-view>
+        <img class="fg-gallery__img" alt="">
+      </button>
+      <figcaption class="fg-gallery__caption">
+        <time class="fg-gallery__time"></time>
+        <span class="fg-gallery__actions">
+          <a class="fg-icon-btn" data-download-link>
+            {{ icon('download', label='Download') }}
+          </a>
+          <button class="fg-icon-btn" type="button" data-delete>
+            {{ icon('trash', label='Delete') }}
+          </button>
+        </span>
+      </figcaption>
+    </figure>
+  </template>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/snapshots.js') }}"></script>
+{% endblock %}

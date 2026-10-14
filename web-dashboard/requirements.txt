@@ -1,0 +1,20 @@
+# FreshGuard - runs on a laptop (sim mode) and on the Raspberry Pi.
+# Hardware-only drivers live in requirements-pi.txt (install that on the Pi as well).
+
+# Web app
+Flask==3.0.3
+Werkzeug==3.0.4
+
+# Config
+python-dotenv==1.0.1
+
+# Cloud replica
+firebase-admin==6.5.0
+
+# QR generation
+qrcode==7.4.2
+Pillow==10.4.0
+
+# Tooling
+ruff==0.6.9
+pytest==8.3.3

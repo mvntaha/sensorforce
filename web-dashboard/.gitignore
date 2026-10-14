@@ -1,0 +1,11 @@
+# The full list lives in the .gitignore one folder up. These are repeated here
+# so the dashboard stays safe if it is ever committed on its own, and because
+# tests/test_skeleton.py checks for them.
+.env
+secrets/
+*serviceAccount*.json
+*.db
+__pycache__/
+.venv/
+var/snapshots/
+var/captures/

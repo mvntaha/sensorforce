@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "components.html" import icon, page_head, note, badge, rfid_pending_card with context %}
+
+{% block title %}Alerts &amp; notifications · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('Alerts & notifications',
+                      'Review conditions, take action, and stay one step ahead.') %}
+      <button class="fg-btn fg-btn--primary" type="button" id="fg-ack-all"
+              {% if not open_count %}disabled{% endif %}>
+        {{ icon('check') }}Acknowledge all
+      </button>
+    {% endcall %}
+
+    {% call note('bell') %}
+      An alert is raised only after a violation is confirmed over three consecutive readings, and
+      the buzzer, the lamps and the display are driven locally, with or without a network.
+      Acknowledging an alert silences it here; it does not change the condition that caused it.
+    {% endcall %}
+
+    {{ rfid_pending_card(rfid_pending | default([])) }}
+
+    <div class="fg-grid fg-grid--2 fg-grid--4">
+      <section class="fg-card">
+        <p class="fg-stat__label">Needs attention</p>
+        <p class="fg-stat__value">{{ '%02d' % open_count }}</p>
+        <p class="fg-stat__foot">Unacknowledged</p>
+      </section>
+      <section class="fg-card">
+        <p class="fg-stat__label">Acknowledged</p>
+        <p class="fg-stat__value">{{ '%02d' % (alerts | length - open_count) }}</p>
+        <p class="fg-stat__foot">Seen by someone</p>
+      </section>
+      <section class="fg-card">
+        <p class="fg-stat__label">Email waiting</p>
+        <p class="fg-stat__value">{{ '%02d' % notify_pending }}</p>
+        <p class="fg-stat__foot">Remote notification queued</p>
+      </section>
+      <section class="fg-card">
+        <p class="fg-stat__label">Queued for the cloud</p>
+        <p class="fg-stat__value">{{ '%02d' % sync_pending }}</p>
+        <p class="fg-stat__foot">Sent on reconnection</p>
+      </section>
+    </div>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Alert history</h2>
+        <div class="fg-card__controls">
+          <label class="fg-checkbox" for="fg-show-acknowledged">
+            <input type="checkbox" id="fg-show-acknowledged" checked>
+            Show acknowledged
+          </label>
+        </div>
+      </header>
+
+      <div class="fg-table-wrap">
+        <table class="fg-table">
+          <caption class="fg-visually-hidden">Alert history</caption>
+          <thead>
+            <tr>
+              <th scope="col">When (UTC)</th>
+              <th scope="col">Zone</th>
+              <th scope="col">Type</th>
+              <th scope="col">Severity</th>
+              <th scope="col">Message</th>
+              <th scope="col">State</th>
+            </tr>
+          </thead>
+          <tbody id="fg-alert-body">
+            {% for alert in alerts %}
+              <tr data-acknowledged="{{ 1 if alert.acknowledged else 0 }}">
+                <td>{{ alert.ts }}</td>
+                <td>{{ alert.zone_name }}</td>
+                <td>{{ alert.type.replace('_', ' ') }}</td>
+                <td>
+                  <span class="fg-severity fg-severity--{{ alert.severity }}">
+                    {{ alert.severity }}
+                  </span>
+                </td>
+                <td>{{ alert.message }}</td>
+                <td>
+                  {% if alert.acknowledged %}
+                    Acknowledged
+                  {% else %}
+                    <button class="fg-btn" type="button" data-ack="{{ alert.id }}">Acknowledge</button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6" class="fg-empty">No alerts have been raised.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Activity log</h2>
+        <p class="fg-card__hint">
+          Every change queued for the cloud, newest first, with whether it has been sent.
+        </p>
+      </header>
+      <div class="fg-log">
+        {% for event in events %}
+          <p class="fg-log__line">
+            <span class="fg-log__time">{{ event.created_at }}</span>
+            <span class="fg-log__entity">{{ event.entity }}</span>
+            {{ event.summary }}
+            <span class="fg-log__state fg-log__state--{{ event.sync_status }}">
+              {{ event.sync_status }}
+            </span>
+          </p>
+        {% else %}
+          <p class="fg-empty">Nothing has been recorded yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% endblock %}

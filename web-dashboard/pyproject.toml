@@ -1,0 +1,54 @@
+[project]
+name = "freshguard"
+version = "0.1.0"
+description = "IoT food-freshness monitor for a fridge or cooler box (Aptech Techwiz 7)."
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["reference", "web/static/vendor"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import sorting
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "S",   # bandit (security)
+    "A",   # builtin shadowing
+    "C4",  # comprehensions
+    "SIM", # simplify
+    "RET", # return conventions
+    "PL",  # pylint subset
+    "RUF",
+]
+ignore = [
+    "PLR0913", # allow wider signatures in the engine and route handlers
+    "RUF012",  # no mutable-default ClassVar annotations required in this project
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Asserts and literal expected values are the point of a test.
+"tests/*" = ["S101", "PLR2004"]
+"scripts/*" = ["S101", "T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "web"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "hardware: needs real Raspberry Pi hardware (skipped in CI and on laptops)",
+    "slow: takes more than a couple of seconds",
+    "engine: needs the freshness rules in core/validation.py and core/engine.py",
+]
+filterwarnings = ["error::DeprecationWarning"]

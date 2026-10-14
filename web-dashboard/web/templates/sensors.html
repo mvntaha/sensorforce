@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% from "components.html" import icon, sensor_tile, fact, page_head, note with context %}
+
+{# Scenario names as the simulator knows them, written out for a reader. #}
+{% set SCENARIO_LABELS = {
+  'normal': 'Normal',
+  'high_temp': 'High temperature',
+  'high_humidity': 'High humidity',
+  'gas_spike': 'Abnormal gas',
+  'door_open': 'Door left open',
+  'sensor_disconnected': 'Disconnected sensor',
+  'dht_intermittent': 'Intermittent sensor'
+} %}
+
+{% block title %}Sensors &amp; devices · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('Sensors & devices',
+                      'What each sensor is reporting, and what the fridge itself is showing.') %}
+      <span class="fg-pill fg-pill--strong">
+        {{ icon('chip') }}{{ 'Simulated sensors' if sensor_mode == 'sim' else 'Live sensors' }}
+      </span>
+    {% endcall %}
+
+    {% call note('sensor') %}
+      Readings are written by <strong>monitor.py</strong>, which runs as its own process and keeps
+      sensing, judging and sounding the local alarm with no network at all. This page only reports
+      what it wrote. Gas is a relative reading from an uncalibrated MQ-135 and is never shown as ppm.
+    {% endcall %}
+
+    {% for zone in zones %}
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">{{ zone.name }}</h2>
+          <p class="fg-card__hint">
+            {% if zone.has_required_fault %}
+              Sensor Fault/Data Unavailable
+            {% elif zone.reading_count == 0 %}
+              No readings recorded yet
+            {% else %}
+              Last reading {{ zone.latest.ts }}
+            {% endif %}
+          </p>
+        </header>
+
+        <div class="fg-grid fg-grid--2 fg-grid--3">
+          {% set t = zone_tiles[zone.zone_id] %}
+          {{ sensor_tile('Temperature', 'gauge', t.temp.value, '°C', t.temp.range,
+                         t.temp.state, t.temp.fill) }}
+          {{ sensor_tile('Humidity', 'droplet', t.hum.value, '%', t.hum.range,
+                         t.hum.state, t.hum.fill) }}
+          {{ sensor_tile('Gas (relative)', 'wind', t.gas.value, '', t.gas.range,
+                         t.gas.state, t.gas.fill) }}
+        </div>
+
+        <p class="fg-door-row">
+          {{ icon('door') }}
+          Door {{ 'open' if zone.latest and zone.latest.door_open else 'closed' }}
+          <span class="fg-door-row__end">Door-open limit {{ door_open_timeout_s }} s</span>
+        </p>
+
+        <div class="fg-grid fg-grid--2">
+          <div>
+            <h3 class="fg-subhead">Fitted sensors</h3>
+            <div class="fg-table-wrap">
+              <table class="fg-table">
+                <caption class="fg-visually-hidden">
+                  Sensors fitted to {{ zone.name }} and what each last reported
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Part</th>
+                    <th scope="col">Measures</th>
+                    <th scope="col">Wiring</th>
+                    <th scope="col">Last reported</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for device in devices[zone.zone_id] %}
+                    <tr>
+                      <th scope="row">{{ device.part }}</th>
+                      <td>{{ device.measures }}</td>
+                      <td><code>{{ device.wiring }}</code></td>
+                      <td>
+                        <span class="fg-state fg-state--{{ device.state }}">{{ device.detail }}</span>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="fg-subhead">Local output</h3>
+            {# A mirror of the 16x2 display, rendered with the same helpers that
+               drive the real one, so what is on this page is what is on the fridge. #}
+            <div class="fg-lcd" role="img"
+                 aria-label="The character display currently shows {{ lcd[zone.zone_id][0] }}, {{ lcd[zone.zone_id][1] }}">
+              <span class="fg-lcd__line">{{ lcd[zone.zone_id][0] }}</span>
+              <span class="fg-lcd__line">{{ lcd[zone.zone_id][1] }}</span>
+            </div>
+            <p class="fg-card__hint">
+              The green, yellow and red lamps follow the same status. A faulty required sensor
+              lights red, never green.
+            </p>
+          </div>
+        </div>
+      </section>
+    {% else %}
+      <section class="fg-card">
+        <p class="fg-empty">No zones are configured yet.</p>
+      </section>
+    {% endfor %}
+
+    {% if current_user.is_admin and sensor_mode == 'sim' %}
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Scenario control</h2>
+          <p class="fg-card__hint">
+            Currently running:
+            <strong id="fg-scenario-current">{{ SCENARIO_LABELS.get(scenario, scenario) }}</strong>
+          </p>
+        </header>
+        <p class="fg-card__hint">
+          Choosing a scenario changes what the simulated sensors produce from the monitor's next
+          reading. The engine, the alerts, the buzzer and the display are the real ones: only the
+          readings are simulated. An alert still needs three consecutive bad readings, so a
+          scenario takes a few seconds to show.
+        </p>
+        <div class="fg-filters" id="fg-scenarios" role="group" aria-label="Simulated scenario">
+          {% for name in scenarios %}
+            <button class="fg-chip" type="button" data-scenario="{{ name }}"
+                    aria-pressed="{{ 'true' if name == scenario else 'false' }}">
+              {{ SCENARIO_LABELS.get(name, name) }}
+            </button>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    <div class="fg-grid fg-grid--2">
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Controller and output devices</h2>
+          <p class="fg-card__hint">Fitted, with nothing to read back.</p>
+        </header>
+        <div class="fg-table-wrap">
+          <table class="fg-table">
+            <caption class="fg-visually-hidden">Devices the controller drives</caption>
+            <thead>
+              <tr><th scope="col">Part</th><th scope="col">Role</th><th scope="col">Wiring</th></tr>
+            </thead>
+            <tbody>
+              {% for part, role, wiring in output_devices %}
+                <tr>
+                  <th scope="row">{{ part }}</th>
+                  <td>{{ role }}</td>
+                  <td><code>{{ wiring }}</code></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="fg-card__hint">
+          These have no readback, so no health is claimed for them here. They are verified by hand
+          in the test matrix against the wiring recorded in the pin map.
+        </p>
+      </section>
+
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Cloud synchronisation</h2>
+          <p class="fg-card__hint">Every change is queued locally first.</p>
+        </header>
+        {{ fact('Waiting to send', sync.pending,
+                'warn' if sync.pending else none) }}
+        {{ fact('Failed, will retry', sync.failed, 'bad' if sync.failed else none) }}
+        {{ fact('Sent', sync.synced) }}
+        {{ fact('Last sent', sync.last_synced_at or 'Nothing sent yet') }}
+        {{ fact('Oldest still queued', sync.oldest_unsent_at or 'Nothing queued') }}
+        <p class="fg-card__hint">
+          {{ icon('cloud') }}
+          Each queued event carries its own identifier, so a reconnection sends it exactly once
+          however many times the attempt is repeated.
+        </p>
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/sensors.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "components.html" import icon, figure_tile, count_bar, page_head, note, fact with context %}
+
+{% block title %}Reports &amp; insights · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('A little insight. A bigger impact.',
+                      'Counted from this kitchen, not estimated.') %}
+      <a class="fg-btn fg-btn--primary" href="{{ url_for('reports.inventory_csv') }}">
+        {{ icon('download') }}Export inventory
+      </a>
+    {% endcall %}
+
+    <div class="fg-grid fg-grid--2 fg-grid--4">
+      {{ figure_tile('In store', '%02d' % counts.stored, 'box', 'Items being watched now') }}
+      {{ figure_tile('Consumed', '%02d' % counts.consumed, 'check',
+                     'Recorded through the planner') }}
+      {{ figure_tile('Recorded as thrown away', '%02d' % counts.discarded, 'trash',
+                     'What the kitchen could not use', tone='amber') }}
+      {{ figure_tile('Alerts raised', '%02d' % counts.alerts, 'bell',
+                     'Confirmed violations, all time', tone='red') }}
+    </div>
+
+    <div class="fg-grid fg-grid--2">
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">What is in store, by category</h2>
+          <p class="fg-card__hint">Registered items, right now.</p>
+        </header>
+        {% for row in by_category %}
+          {{ count_bar(row.label, row.count, row.share) }}
+        {% else %}
+          <p class="fg-empty">Nothing is stored yet.</p>
+        {% endfor %}
+      </section>
+
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Freshness status</h2>
+          <p class="fg-card__hint">The engine's current verdict on each item.</p>
+        </header>
+        {% for row in by_status %}
+          {{ count_bar(row.label, row.count, row.share) }}
+        {% endfor %}
+      </section>
+    </div>
+
+    <div class="fg-grid fg-grid--2">
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">Where it is kept</h2>
+          <p class="fg-card__hint">Items per storage zone.</p>
+        </header>
+        {% for row in by_zone %}
+          {{ count_bar(row.label, row.count, row.share) }}
+        {% else %}
+          <p class="fg-empty">No zones are configured yet.</p>
+        {% endfor %}
+      </section>
+
+      <section class="fg-card">
+        <header class="fg-card__header">
+          <h2 class="fg-card__title">What has been alerted</h2>
+          <p class="fg-card__hint">Alerts by kind, all time.</p>
+        </header>
+        {% for row in alerts_by_type %}
+          {{ count_bar(row.label, row.count, row.share) }}
+        {% else %}
+          <p class="fg-empty">No alerts have been raised.</p>
+        {% endfor %}
+      </section>
+    </div>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">What this system has recorded</h2>
+      </header>
+      {{ fact('Sensor readings stored', counts.readings) }}
+      {{ fact('Events queued for the cloud', counts.events) }}
+      {{ fact('Still waiting to send', counts.pending,
+              'warn' if counts.pending else none) }}
+
+      {% call note('chart') %}
+        No money saved and no carbon figure is shown. FreshGuard measures temperature, humidity,
+        a relative gas reading and a door contact — it has no weight, no price and no verified
+        environmental data, so any such figure would be invented.
+      {% endcall %}
+    </section>
+  </div>
+{% endblock %}

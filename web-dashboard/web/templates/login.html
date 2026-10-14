@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "components.html" import field %}
+
+{% block title %}Sign in · FreshGuard{% endblock %}
+{% block main_class %}fg-main fg-center{% endblock %}
+
+{% block content %}
+  <div class="fg-auth">
+    <div class="fg-auth__intro">
+      <span class="fg-auth__brand">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+        Fresh Guard
+      </span>
+      <h1>Sign in</h1>
+      <p class="fg-card__hint">Food storage monitoring for this kitchen.</p>
+    </div>
+
+    <section class="fg-card">
+      <form class="fg-stack" method="post" action="{{ url_for('auth.login') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+
+        {{ field('username', 'Username', required=True, autocomplete='username',
+                 value=username | default(''), autofocus=True) }}
+
+        {{ field('password', 'Password', type='password', required=True,
+                 autocomplete='current-password') }}
+
+        {% if error %}
+          {# Deliberately vague: never reveal which half of the pair was wrong.
+             Sits against the button rather than at the top of the card, so it
+             is read at the moment of the retry rather than scrolled past. #}
+          <p class="fg-field__error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        <button class="fg-btn fg-btn--primary fg-btn--block" type="submit">Sign in</button>
+      </form>
+    </section>
+
+  </div>
+{% endblock %}

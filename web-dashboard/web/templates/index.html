@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% from "components.html" import icon, badge, food_mark with context %}
+
+{% block title %}Scan · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-scan-page">
+    <header class="fg-scan-page__top">
+      <a class="fg-brand" href="{{ url_for('main.scan') }}">
+        <span class="fg-brand__mark">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+        </span>
+        FreshGuard
+      </a>
+
+      {# app.js lifts the token from a form on the page, and every write from
+         this page is anonymous, so this token is the only thing standing
+         between another site and the consume endpoint. #}
+      <form class="fg-visually-hidden">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+      </form>
+
+      <div class="fg-scan-page__state">
+        <button class="fg-icon-btn" type="button" id="fg-theme-toggle" aria-pressed="false">
+          <span class="fg-theme-icon fg-theme-icon--light">{{ icon('sun', label='Switch to dark mode') }}</span>
+          <span class="fg-theme-icon fg-theme-icon--dark">{{ icon('moon', label='Switch to light mode') }}</span>
+        </button>
+        <a class="fg-btn fg-btn--ghost fg-scan-page__admin" href="{{ url_for('main.dashboard') }}">
+          {{ icon('grid') }}Dashboard
+        </a>
+      </div>
+    </header>
+
+    {# Two columns that share one baseline: the camera and its control on the
+       left, the heading and the two keyboard-free paths on the right. Both
+       are single stacks with the same rhythm, so their edges line up. #}
+    <main class="fg-scan-page__body">
+      <div class="fg-scanner-stage">
+        <div class="fg-scanner" id="fg-scanner" data-state="idle">
+          <div class="fg-scanner__viewport" id="fg-scanner-viewport"></div>
+
+          <div class="fg-scanner__overlay" aria-hidden="true">
+            <span class="fg-scanner__frame"></span>
+            <span class="fg-scanner__line"></span>
+          </div>
+
+          <div class="fg-scanner__placeholder" id="fg-scanner-placeholder">
+            {{ icon('qr') }}
+            <p id="fg-scanner-hint">The camera is off.</p>
+          </div>
+        </div>
+
+        <p class="fg-scanner__status" id="fg-scan-error" role="status"
+           {% if not request.args.get('error') %}hidden{% endif %}>
+          {%- if request.args.get('error') -%}
+            That is not a FreshGuard identifier. They look like FG-0001.
+          {%- endif -%}
+        </p>
+
+        <div class="fg-scanner__controls">
+          <button class="fg-btn fg-btn--primary fg-btn--lg" type="button" id="fg-scan-start">
+            {{ icon('scan') }}Start scanning
+          </button>
+          <button class="fg-btn fg-btn--lg" type="button" id="fg-scan-stop" hidden>
+            {{ icon('close') }}Stop camera
+          </button>
+        </div>
+      </div>
+
+      <div class="fg-scan-panel">
+        <h1>What have you got there?</h1>
+        <p class="fg-scan-page__sub">Hold a label up to the camera.</p>
+
+        {# A plain GET, deliberately: it needs no JavaScript, and it lands on
+           the same page with the record already rendered. #}
+        <form class="fg-scan-manual" method="get" action="{{ url_for('main.scanned_lookup') }}">
+          <label class="fg-label" for="field-qr_id">Or type the identifier</label>
+          <div class="fg-scan-manual__row">
+            <input class="fg-input" id="field-qr_id" name="qr_id" placeholder="FG-0001"
+                   pattern="[Ff][Gg]-[0-9]{4}" required autocomplete="off"
+                   value="{{ requested | default('') }}">
+            <button class="fg-btn fg-btn--lg" type="submit">{{ icon('arrow') }}Open</button>
+          </div>
+        </form>
+
+        <div class="fg-scan-alt__divider" aria-hidden="true"><span>or</span></div>
+
+        <a class="fg-btn fg-btn--lg fg-scan-alt__add" href="{{ url_for('main.new_item') }}">
+          {{ icon('plus') }}Put something in
+        </a>
+      </div>
+    </main>
+
+    <footer class="fg-scan-page__actions">
+      <p class="fg-disclaimer">FreshGuard does not certify food safety. Inspect food before use.</p>
+    </footer>
+  </div>
+
+  {# The record. Filled in by the scanner after a decode, or rendered here when
+     an identifier arrived in the URL, so the flow survives a browser with no
+     camera and no JavaScript. #}
+  <dialog class="fg-dialog fg-dialog--wide" id="fg-item-dialog" tabindex="-1"
+          aria-labelledby="fg-dialog-title"
+          {% if requested %}data-open="1"{% endif %}>
+    <div class="fg-dialog__head">
+      <h2 class="fg-dialog__title" id="fg-dialog-title">
+        {%- if scanned %}{{ scanned.item.name }}
+        {%- elif requested %}Not registered yet
+        {%- else %}Item{% endif -%}
+      </h2>
+      <button class="fg-icon-btn" type="button" data-close-dialog>
+        {{ icon('close', label='Close') }}
+      </button>
+    </div>
+
+    <div class="fg-dialog__body" id="fg-dialog-body">
+      {% if scanned %}
+        {% set verdict = scanned.assessment %}
+        {% set tone = 'fresh' if verdict.status|string == 'Fresh/Normal' else
+                      'soon' if verdict.status|string == 'Use Soon' else
+                      'check' if verdict.status|string == 'Check Food' else 'fault' %}
+        <div class="fg-dialog__split">
+          {# The verdict in its own colour, on its own side. The panel takes
+             the VERDICT's tint, never the food's category: tinting by
+             category once put a green panel behind a "Check Food" badge, so
+             the colour and the words disagreed on the one screen where
+             someone decides whether to eat something. The sticker still
+             carries the category. #}
+          <aside class="fg-dialog__lead fg-dialog__lead--{{ tone }} fg-cat-{{ scanned.item.category }}">
+            {{ food_mark(scanned.item.category) }}
+            {{ badge(tone) }}
+            <p class="fg-dialog__advice">{{ verdict.message }}</p>
+
+            <div class="fg-dialog__advice-list">
+              {% if verdict.recommendation %}
+                <p class="fg-dialog__advice fg-dialog__advice--strong">
+                  {{ verdict.recommendation }}
+                </p>
+              {% endif %}
+              {% if verdict.zone_level %}
+                <p class="fg-dialog__advice fg-dialog__advice--quiet">
+                  This is a condition of the whole storage zone, not of this container.
+                </p>
+              {% endif %}
+              {% if verdict.status|string == 'Check Food' %}
+                <p class="fg-dialog__advice fg-dialog__advice--quiet">
+                  {{ disposal_recommendation }}.
+                </p>
+              {% endif %}
+            </div>
+          </aside>
+
+          <div class="fg-dialog__side">
+            <div class="fg-dialog__facts">
+              <div class="fg-fact">
+                <span class="fg-fact__label">Container</span>
+                <span class="fg-fact__value">{{ scanned.item.qr_id }}</span>
+              </div>
+              <div class="fg-fact">
+                <span class="fg-fact__label">Category</span>
+                <span class="fg-fact__value"><span class="fg-cat-tag">{{ scanned.item.category }}</span></span>
+              </div>
+              <div class="fg-fact">
+                <span class="fg-fact__label">Amount</span>
+                <span class="fg-fact__value">{{ scanned.item.quantity }} {{ scanned.item.unit }}</span>
+              </div>
+              <div class="fg-fact">
+                <span class="fg-fact__label">Where</span>
+                <span class="fg-fact__value">{{ zone_names.get(scanned.item.zone_id, '—') }}</span>
+              </div>
+              <div class="fg-fact">
+                <span class="fg-fact__label">Stored for</span>
+                <span class="fg-fact__value">
+                  {{ scanned.days_stored }} day{{ '' if scanned.days_stored == 1 else 's' }}
+                </span>
+              </div>
+              <div class="fg-fact">
+                <span class="fg-fact__label">Use by</span>
+                <span class="fg-fact__value">{{ scanned.item.expiry_date or '—' }}</span>
+              </div>
+            </div>
+
+            <div class="fg-dialog__foot">
+              <button class="fg-btn fg-btn--primary" type="button"
+                      data-outcome="consumed" data-qr="{{ scanned.item.qr_id }}"
+                      data-name="{{ scanned.item.name }}">
+                {{ icon('check') }}I ate this
+              </button>
+              <button class="fg-btn" type="button"
+                      data-outcome="discarded" data-qr="{{ scanned.item.qr_id }}"
+                      data-name="{{ scanned.item.name }}">
+                {{ icon('trash') }}Threw it away
+              </button>
+              <button class="fg-btn fg-btn--ghost" type="button" data-close-dialog>Cancel</button>
+            </div>
+          </div>
+        </div>
+      {% elif requested %}
+        <div class="fg-dialog__split">
+          <aside class="fg-dialog__lead">
+            <p class="fg-dialog__advice">
+              {{ requested }} is not in the inventory. Add it in a few short steps and this
+              label becomes its own.
+            </p>
+          </aside>
+
+          <div class="fg-dialog__side">
+            <div class="fg-dialog__facts">
+              <div class="fg-fact">
+                <span class="fg-fact__label">Container</span>
+                <span class="fg-fact__value">{{ requested }}</span>
+              </div>
+            </div>
+
+            <div class="fg-dialog__foot">
+              <a class="fg-btn fg-btn--primary"
+                 href="{{ url_for('main.new_item', qr_id=requested) }}">{{ icon('plus') }}Add this item</a>
+              <button class="fg-btn fg-btn--ghost" type="button" data-close-dialog>Cancel</button>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </dialog>
+
+  {# Shown by kiosk_rfid.js when a tag no item carries is tapped at the reader.
+     A tag that already belongs to an item opens that item's record instead,
+     the same record a QR scan opens. #}
+  <dialog class="fg-dialog" id="fg-rfid-dialog" tabindex="-1" aria-labelledby="fg-rfid-title">
+    <div class="fg-dialog__head">
+      <h2 class="fg-dialog__title" id="fg-rfid-title">RFID tag detected</h2>
+      <button class="fg-icon-btn" type="button" data-rfid-close>
+        {{ icon('close', label='Close') }}
+      </button>
+    </div>
+    <div class="fg-dialog__body">
+      <div class="fg-fact">
+        <span class="fg-fact__label">Tag</span>
+        <span class="fg-fact__value"><code id="fg-rfid-tag"></code></span>
+      </div>
+      <div class="fg-fact">
+        <span class="fg-fact__label">Tapped</span>
+        <span class="fg-fact__value" id="fg-rfid-time"></span>
+      </div>
+      <div class="fg-fact">
+        <span class="fg-fact__label">Reader's name</span>
+        <span class="fg-fact__value" id="fg-rfid-label"></span>
+      </div>
+      <p class="fg-dialog__advice">
+        This tag is not on any item yet. Not adding it? Tap it on the reader again to cancel.
+      </p>
+
+      <div class="fg-rfid-link" id="fg-rfid-link" hidden>
+        <p class="fg-label">Which item is it?</p>
+        <div class="fg-rfid-choices" id="fg-rfid-choices"></div>
+        <p class="fg-empty" id="fg-rfid-none" hidden>
+          Every item already has a tag. Add this one as a new item.
+        </p>
+      </div>
+    </div>
+    <div class="fg-dialog__foot">
+      <a class="fg-btn fg-btn--primary fg-btn--lg" id="fg-rfid-add" href="#">
+        {{ icon('plus') }}Add item
+      </a>
+      <button class="fg-btn fg-btn--lg" type="button" id="fg-rfid-existing" aria-expanded="false">
+        Already added it?
+      </button>
+    </div>
+  </dialog>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='vendor/html5-qrcode.min.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/kiosk_rfid.js') }}"></script>
+{% endblock %}

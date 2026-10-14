@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "components.html" import badge, food_cell, icon, figure_tile, page_head, rfid_pending_card with context %}
+
+{% block title %}Food inventory · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('Food inventory', 'Every container has a story. Keep yours fresh.') %}
+      <a class="fg-btn" href="{{ url_for('main.scan') }}">{{ icon('qr') }}Scan or find an item</a>
+      <a class="fg-btn fg-btn--primary" href="{{ url_for('main.scan') }}">
+        {{ icon('plus') }}Add an item
+      </a>
+    {% endcall %}
+
+    <div class="fg-grid fg-grid--2 fg-grid--4">
+      {{ figure_tile('Items stored', '%02d' % counts.total, 'box',
+                     'Across %d storage zone%s' % (zones | length,
+                                                   '' if zones | length == 1 else 's')) }}
+      {{ figure_tile('Fresh/Normal', '%02d' % counts.fresh, 'leaf',
+                     'Within the monitored limits') }}
+      {{ figure_tile('Use Soon', '%02d' % counts.soon, 'clock',
+                     'Plan a meal. Make it count.', tone='amber') }}
+      {{ figure_tile('Check Food', '%02d' % counts.check, 'alert',
+                     'Inspect before use', tone='red') }}
+    </div>
+
+    <section class="fg-card fg-card--filters">
+      <div class="fg-toolbar">
+        <div class="fg-search">
+          <label class="fg-visually-hidden" for="fg-inventory-search">Search the inventory</label>
+          {{ icon('search') }}
+          <input class="fg-input" id="fg-inventory-search" type="search"
+                 placeholder="Search by name, category or identifier" autocomplete="off">
+        </div>
+
+        <div class="fg-toolbar__field">
+          <label class="fg-visually-hidden" for="fg-inventory-category">Food category</label>
+          <select class="fg-select" id="fg-inventory-category">
+            <option value="">Every category</option>
+            {% for category in categories %}
+              <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {# Two independent filters, so each is a labelled group of its own with a
+         rule between them. Run together they read as one broken set of tabs. #}
+      <div class="fg-filter-row">
+        <span class="fg-filter-row__label" id="fg-filter-status">Status</span>
+        <div class="fg-filters" role="group" aria-labelledby="fg-filter-status">
+          <button class="fg-chip" type="button" data-filter-status="" aria-pressed="true">All</button>
+          <button class="fg-chip" type="button" data-filter-status="Fresh/Normal" aria-pressed="false">Fresh/Normal</button>
+          <button class="fg-chip" type="button" data-filter-status="Use Soon" aria-pressed="false">Use Soon</button>
+          <button class="fg-chip" type="button" data-filter-status="Check Food" aria-pressed="false">Check Food</button>
+          <button class="fg-chip" type="button" data-filter-status="Sensor Fault/Data Unavailable" aria-pressed="false">Sensor Fault</button>
+        </div>
+      </div>
+
+      <div class="fg-filter-row">
+        <span class="fg-filter-row__label" id="fg-filter-zone">Zone</span>
+        <div class="fg-filters" role="group" aria-labelledby="fg-filter-zone">
+          <button class="fg-chip" type="button" data-filter-zone="" aria-pressed="true">Every zone</button>
+          {% for zone in zones %}
+            <button class="fg-chip" type="button" data-filter-zone="{{ zone.zone_id }}" aria-pressed="false">{{ zone.name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    {{ rfid_pending_card(rfid_pending | default([])) }}
+
+    <section class="fg-card">
+      <div class="fg-table-wrap">
+        <table class="fg-table">
+          <caption class="fg-visually-hidden">Stored items and their freshness status</caption>
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">QR</th>
+              <th scope="col">Category</th>
+              <th scope="col">Zone</th>
+              <th class="fg-table__num" scope="col">Quantity</th>
+              <th class="fg-table__num" scope="col">Stored for</th>
+              <th scope="col">Use by</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody id="fg-inventory-body">
+            {% for status in statuses %}
+              <tr data-status="{{ status.assessment.status }}"
+                  data-zone="{{ status.item.zone_id }}"
+                  data-category="{{ status.item.category }}"
+                  data-search="{{ (status.item.name ~ ' ' ~ status.item.category ~ ' ' ~ status.item.qr_id) | lower }}">
+                <td>
+                  <a href="{{ url_for('main.item_page', qr_id=status.item.qr_id) }}">
+                    {{ food_cell(status.item.name, status.item.category,
+                                 status.item.quantity, status.item.unit, meta=False) }}
+                  </a>
+                </td>
+                <td><code>{{ status.item.qr_id }}</code></td>
+                <td>{{ status.item.category }}</td>
+                <td>{{ zone_names.get(status.item.zone_id, '—') }}</td>
+                <td class="fg-table__num">{{ status.item.quantity }} {{ status.item.unit }}</td>
+                {# SRS 1.6 xvii lists storage duration separately from expiry. #}
+                <td class="fg-table__num">
+                  {{ status.days_stored }} day{{ '' if status.days_stored == 1 else 's' }}
+                </td>
+                <td>{{ status.item.expiry_date or '—' }}</td>
+                <td>{{ badge(
+                  'fresh' if status.assessment.status|string == 'Fresh/Normal' else
+                  'soon' if status.assessment.status|string == 'Use Soon' else
+                  'check' if status.assessment.status|string == 'Check Food' else 'fault') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="fg-empty" id="fg-inventory-empty" {% if statuses %}hidden{% endif %}>
+        Nothing matches these filters.
+      </p>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% from "components.html" import page_head, note, icon with context %}
+
+{% block title %}Settings · FreshGuard{% endblock %}
+
+{% block content %}
+  <div class="fg-stack">
+    {% call page_head('Settings & thresholds',
+                      'Configure the prototype. Make the assumptions explicit.') %}
+      <span class="fg-pill fg-pill--strong">{{ icon('settings') }}Administrator</span>
+    {% endcall %}
+
+    {% call note('settings') %}
+      Every limit must cite a source or say <strong>prototype/demo assumption</strong>; a limit
+      without one cannot be saved. These are controlled demo values, not certified food-storage
+      guidance, and changing one changes what the engine decides from the next reading onwards.
+    {% endcall %}
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Food category limits</h2>
+      </header>
+      <div class="fg-table-wrap">
+        <table class="fg-table">
+          <caption class="fg-visually-hidden">Threshold limits per food category</caption>
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              <th scope="col">Temp min</th>
+              <th scope="col">Temp max</th>
+              <th scope="col">Hum min</th>
+              <th scope="col">Hum max</th>
+              <th scope="col">Storage days</th>
+              <th scope="col">Use soon</th>
+              <th scope="col">Source</th>
+              <th scope="col"><span class="fg-visually-hidden">Save</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in thresholds %}
+              <tr data-threshold="{{ row.category }}">
+                <th scope="row">{{ row.category }}</th>
+                <td><input class="fg-input" name="temp_min" type="number" step="0.1" value="{{ row.temp_min }}" aria-label="{{ row.category }} minimum temperature"></td>
+                <td><input class="fg-input" name="temp_max" type="number" step="0.1" value="{{ row.temp_max }}" aria-label="{{ row.category }} maximum temperature"></td>
+                <td><input class="fg-input" name="hum_min" type="number" step="1" value="{{ row.hum_min }}" aria-label="{{ row.category }} minimum humidity"></td>
+                <td><input class="fg-input" name="hum_max" type="number" step="1" value="{{ row.hum_max }}" aria-label="{{ row.category }} maximum humidity"></td>
+                <td><input class="fg-input" name="storage_limit_days" type="number" step="1" value="{{ row.storage_limit_days }}" aria-label="{{ row.category }} storage limit"></td>
+                <td><input class="fg-input" name="use_soon_days" type="number" step="1" value="{{ row.use_soon_days }}" aria-label="{{ row.category }} use soon window"></td>
+                <td><input class="fg-input" name="source_note" value="{{ row.source_note }}" aria-label="{{ row.category }} source note"></td>
+                <td><button class="fg-btn fg-btn--primary" type="button" data-save-threshold="{{ row.category }}">Save</button></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="9" class="fg-empty">No categories configured.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="fg-grid fg-grid--2">
+      <section class="fg-card">
+        <h2 class="fg-card__title">Door</h2>
+        <form class="fg-stack" id="fg-settings-form" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+          <div class="fg-field">
+            <label class="fg-label" for="field-door">Door-open timeout (seconds)</label>
+            <input class="fg-input" id="field-door" name="door_open_timeout_s" type="number"
+                   min="1" value="{{ door_open_timeout_s }}" required>
+          </div>
+          <button class="fg-btn fg-btn--primary" type="submit">Save</button>
+        </form>
+      </section>
+
+      <section class="fg-card">
+        <h2 class="fg-card__title">Zone gas limits</h2>
+        <p class="fg-card__hint">
+          Gas is measured per zone and shown as a relative reading, never as ppm.
+        </p>
+        <div class="fg-table-wrap">
+          <table class="fg-table">
+            <caption class="fg-visually-hidden">Gas limits per zone</caption>
+            <thead>
+              <tr><th scope="col">Zone</th><th scope="col">Baseline</th><th scope="col">Abnormal</th><th scope="col">Source</th></tr>
+            </thead>
+            <tbody>
+              {% for zone in zones %}
+                <tr>
+                  <th scope="row">{{ zone.name }}</th>
+                  <td>{{ zone.gas_baseline if zone.gas_baseline is not none else '—' }}</td>
+                  <td>{{ zone.gas_abnormal if zone.gas_abnormal is not none else '—' }}</td>
+                  <td>{{ zone.gas_source_note or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Accounts</h2>
+      </header>
+
+      <div class="fg-table-wrap">
+        <table class="fg-table">
+          <caption class="fg-visually-hidden">User accounts</caption>
+          <thead>
+            <tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Created</th><th scope="col"><span class="fg-visually-hidden">Remove</span></th></tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+              <tr>
+                <th scope="row">{{ user.username }}</th>
+                <td>{{ user.role }}</td>
+                <td>{{ user.created_at }}</td>
+                <td><button class="fg-btn fg-btn--destructive" type="button" data-delete-user="{{ user.id }}">Remove</button></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <form class="fg-stack" id="fg-user-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token | default('') }}">
+        <div class="fg-grid fg-grid--2">
+          <div class="fg-field">
+            <label class="fg-label" for="field-new-username">New username</label>
+            <input class="fg-input" id="field-new-username" name="username" autocomplete="off" required>
+          </div>
+          <div class="fg-field">
+            <label class="fg-label" for="field-new-password">Password</label>
+            <input class="fg-input" id="field-new-password" name="password" type="password"
+                   autocomplete="new-password" required>
+          </div>
+        </div>
+        <div class="fg-field">
+          <label class="fg-label" for="field-new-role">Role</label>
+          <select class="fg-input" id="field-new-role" name="role">
+            <option value="staff">staff</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+        <button class="fg-btn fg-btn--primary" type="submit">Add account</button>
+      </form>
+    </section>
+    <section class="fg-card">
+      <header class="fg-card__header">
+        <h2 class="fg-card__title">Decision rule order</h2>
+        <p class="fg-card__hint">
+          The engine applies these in order and stops at the first match.
+        </p>
+      </header>
+      <ol class="fg-rules">
+        {% for rule in decision_rules %}
+          <li class="fg-rules__item">
+            <span class="fg-rules__number">{{ loop.index }}</span>
+            <div>
+              <strong>{{ rule.condition }}</strong>
+              <p class="fg-card__hint">{{ rule.outcome }}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ol>
+      <p class="fg-card__hint">
+        A confirmed condition means three consecutive readings, cleared with hysteresis so a value
+        sitting on a limit cannot flap. Gas is judged for the whole zone and is never attributed to
+        one item.
+      </p>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,10 @@
+# Raspberry Pi only. Install after requirements.txt on the Pi:
+#   pip install -r requirements.txt -r requirements-pi.txt
+# These are imported lazily inside core/sensors/real.py so sim mode works on any laptop.
+
+adafruit-circuitpython-dht==4.0.5      # DHT11 on GPIO4
+adafruit-circuitpython-ads1x15==2.3.1  # MQ-135 via ADS1115 (I2C 0x48)
+adafruit-blinka==8.48.0                # CircuitPython compatibility layer
+RPi.GPIO==0.7.1                        # reed switch, buzzer, LEDs
+RPLCD==1.3.1                           # 16x2 I2C LCD (0x27)
+smbus2==0.4.3                          # I2C bus access (LCD, DS3231)

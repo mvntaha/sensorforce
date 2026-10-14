@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{{ code }} · FreshGuard{% endblock %}
+{% block main_class %}fg-main fg-center{% endblock %}
+
+{% block content %}
+  <section class="fg-card fg-auth">
+    <h1>{{ code }}</h1>
+    <p class="fg-card__hint">{{ message }}</p>
+    <p><a class="fg-btn" href="{{ url_for('main.dashboard') }}">Back to the dashboard</a></p>
+  </section>
+{% endblock %}
